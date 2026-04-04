@@ -3,10 +3,10 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
-const { initDatabase } = require('./config/database');
-const authRoutes = require('./routes/auth');
-const productRoutes = require('./routes/products');
-const userRoutes = require('./routes/users');
+const { initDatabase } = require('./src/config/database');
+const authRoutes = require('./src/routes/auth');
+const productRoutes = require('./src/routes/products');
+const userRoutes = require('./src/routes/users');
 
 const app = express();
 const PORT = process.env.PORT || 8000;
