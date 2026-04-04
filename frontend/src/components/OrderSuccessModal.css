@@ -1,0 +1,71 @@
+/* Order Success Modal Animations */
+
+@keyframes order-modal-fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes order-modal-slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes order-modal-scaleIn {
+  from {
+    transform: scale(0) rotate(-180deg);
+  }
+  to {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes order-modal-progress {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+.order-modal-fadeIn {
+  animation: order-modal-fadeIn 0.3s ease-out forwards;
+  opacity: 1 !important;
+}
+
+.order-modal-slideUp {
+  animation: order-modal-slideUp 0.4s ease-out forwards;
+  opacity: 1 !important;
+}
+
+.order-modal-scaleIn {
+  animation: order-modal-scaleIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+  transform: scale(1) !important;
+}
+
+.order-modal-progress {
+  animation: order-modal-progress 3s linear forwards;
+  width: 100% !important;
+}
+
+/* Ensure backdrop is visible */
+.order-modal-backdrop {
+  background: rgba(0, 0, 0, 0.5) !important;
+  backdrop-filter: blur(4px);
+}
+
+/* Ensure modal content is visible */
+.order-modal-content {
+  background: white !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}

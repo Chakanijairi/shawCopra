@@ -1,0 +1,513 @@
+import { useState, useEffect } from "react"
+import { Link } from "react-router-dom"
+import { getProducts, createProduct, updateProduct, deleteProduct, API_URL } from "../lib/api"
+
+const SIDEBAR_LINKS = [
+  { label: "Dashboard", id: "dashboard", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
+  { label: "Orders", id: "orders", icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" },
+  { label: "Products", id: "products", icon: "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7l8-4m0 10V7m0 0l8 4" },
+]
+
+function AdminDashboard() {
+  const [activeTab, setActiveTab] = useState("dashboard")
+  const [ordersPage, setOrdersPage] = useState(1)
+  const [orders, setOrders] = useState([])
+  const [products, setProducts] = useState([])
+  const [productsLoading, setProductsLoading] = useState(true)
+  const [showProductModal, setShowProductModal] = useState(false)
+  const [editingProduct, setEditingProduct] = useState(null)
+  const [formName, setFormName] = useState("")
+  const [formDescription, setFormDescription] = useState("")
+  const [formPrice, setFormPrice] = useState("")
+  const [formImage, setFormImage] = useState(null)
+  const [formError, setFormError] = useState("")
+  const [saving, setSaving] = useState(false)
+
+  const ordersPerPage = 5
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await getProducts()
+        setProducts(data)
+      } catch {
+        setProducts([])
+      } finally {
+        setProductsLoading(false)
+      }
+    }
+    load()
+  }, [activeTab])
+
+  useEffect(() => {
+    // Load orders from localStorage
+    const loadOrders = () => {
+      const storedOrders = JSON.parse(localStorage.getItem('orders') || '[]')
+      setOrders(storedOrders.reverse()) // Show newest first
+    }
+    loadOrders()
+    
+    // Refresh orders when switching to orders tab
+    if (activeTab === 'orders') {
+      loadOrders()
+    }
+  }, [activeTab])
+
+  const totalOrdersPages = Math.ceil(orders.length / ordersPerPage)
+  const paginatedOrders = orders.slice((ordersPage - 1) * ordersPerPage, ordersPage * ordersPerPage)
+
+  const updateOrderStatus = (orderId, newStatus) => {
+    const allOrders = JSON.parse(localStorage.getItem('orders') || '[]')
+    const updatedOrders = allOrders.map(order => 
+      order.id === orderId ? { ...order, status: newStatus } : order
+    )
+    localStorage.setItem('orders', JSON.stringify(updatedOrders))
+    setOrders(updatedOrders.reverse())
+  }
+
+  const openAddProduct = () => {
+    setEditingProduct(null)
+    setFormName("")
+    setFormDescription("")
+    setFormPrice("")
+    setFormImage(null)
+    setFormError("")
+    setShowProductModal(true)
+  }
+
+  const openEditProduct = (p) => {
+    setEditingProduct(p)
+    setFormName(p.name)
+    setFormDescription(p.description || "")
+    setFormPrice(String(p.price))
+    setFormImage(null)
+    setFormError("")
+    setShowProductModal(true)
+  }
+
+  const handleSaveProduct = async (e) => {
+    e.preventDefault()
+    setFormError("")
+    setSaving(true)
+    try {
+      const formData = new FormData()
+      formData.append("name", formName)
+      formData.append("description", formDescription)
+      formData.append("price", parseFloat(formPrice) || 0)
+      if (formImage) formData.append("image", formImage)
+
+      if (editingProduct) {
+        const updated = await updateProduct(editingProduct.id, formData)
+        setProducts(products.map((p) => (p.id === editingProduct.id ? updated : p)))
+      } else {
+        const created = await createProduct(formData)
+        setProducts([...products, created])
+      }
+      setShowProductModal(false)
+    } catch (err) {
+      setFormError(err.message || "Failed to save")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDeleteProduct = async (id) => {
+    if (!window.confirm("Delete this product?")) return
+    try {
+      await deleteProduct(id)
+      setProducts(products.filter((p) => p.id !== id))
+    } catch {
+      alert("Failed to delete")
+    }
+  }
+
+  const productImageUrl = (p) => (p.image_path ? `${API_URL}${p.image_path}` : null)
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Sidebar */}
+      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col fixed left-0 top-0 bottom-0 z-30">
+        <div className="p-6 border-b border-gray-100">
+          <Link to="/" className="text-xl font-semibold text-[#664C36]" style={{ fontFamily: "cursive" }}>
+            Shaw&apos;s Copra
+          </Link>
+          <p className="text-xs text-gray-500 mt-1">Admin Dashboard</p>
+        </div>
+        <nav className="flex-1 p-4 space-y-1">
+          {SIDEBAR_LINKS.map((link) => (
+            <button
+              key={link.id}
+              type="button"
+              onClick={() => setActiveTab(link.id)}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-sm font-medium transition-colors ${activeTab === link.id ? "bg-[#664C36] text-white" : "text-gray-600 hover:bg-gray-100"}`}
+            >
+              <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={link.icon} /></svg>
+              {link.label}
+            </button>
+          ))}
+        </nav>
+        <div className="p-4 border-t border-gray-100">
+          <Link to="/" className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-100 text-sm font-medium">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+            View Store
+          </Link>
+          <Link to="/login" onClick={() => { localStorage.removeItem("token"); localStorage.removeItem("role"); }} className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 text-sm font-medium mt-1">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+            Logout
+          </Link>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <main className="flex-1 ml-64 p-8">
+        <header className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-500 mt-1">Monitor and manage your store</p>
+        </header>
+
+        {activeTab === "dashboard" && (
+          <>
+            {/* Stats cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              {[
+                { label: "Total Sales", value: "₱124,500", sub: "This month", color: "bg-blue-500" },
+                { label: "Orders", value: "48", sub: "Last 30 days", color: "bg-emerald-500" },
+                { label: "Products", value: products.length, sub: "Active listings", color: "bg-amber-500" },
+                { label: "Customers", value: "156", sub: "Registered", color: "bg-violet-500" },
+              ].map((card) => (
+                <div key={card.label} className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+                  <div className={`w-10 h-10 rounded-lg ${card.color} opacity-90 mb-3`} />
+                  <p className="text-sm font-medium text-gray-500">{card.label}</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{card.value}</p>
+                  <p className="text-xs text-gray-400 mt-1">{card.sub}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Recent Orders */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-8 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900">Recent Orders</h2>
+                <button type="button" onClick={() => setActiveTab("orders")} className="text-sm text-[#664C36] font-medium hover:underline">
+                  View all
+                </button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="bg-gray-50 text-gray-600 text-sm">
+                      <th className="px-6 py-3 font-medium">Order ID</th>
+                      <th className="px-6 py-3 font-medium">Customer</th>
+                      <th className="px-6 py-3 font-medium">Total</th>
+                      <th className="px-6 py-3 font-medium">Status</th>
+                      <th className="px-6 py-3 font-medium">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.length === 0 ? (
+                      <tr>
+                        <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
+                          No orders yet
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedOrders.slice(0, 5).map((order) => {
+                        const orderDate = new Date(order.createdAt).toLocaleDateString()
+                        const statusColors = {
+                          pending: "bg-amber-100 text-amber-700",
+                          completed: "bg-emerald-100 text-emerald-700",
+                          cancelled: "bg-red-100 text-red-700"
+                        }
+                        return (
+                          <tr key={order.id} className="border-t border-gray-100 hover:bg-gray-50/50">
+                            <td className="px-6 py-4 font-medium text-gray-900">#{order.id}</td>
+                            <td className="px-6 py-4 text-gray-600">{order.shippingInfo?.fullName || 'N/A'}</td>
+                            <td className="px-6 py-4 text-gray-600">₱{order.total?.toFixed(2)}</td>
+                            <td className="px-6 py-4">
+                              <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[order.status] || 'bg-gray-100 text-gray-700'}`}>
+                                {order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-gray-500 text-sm">{orderDate}</td>
+                          </tr>
+                        )
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-between">
+                <p className="text-sm text-gray-500">
+                  Page {ordersPage} of {totalOrdersPages}
+                </p>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setOrdersPage((p) => Math.max(1, p - 1))} disabled={ordersPage === 1} className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 disabled:opacity-50 hover:bg-gray-50">
+                    Previous
+                  </button>
+                  <button type="button" onClick={() => setOrdersPage((p) => Math.min(totalOrdersPages, p + 1))} disabled={ordersPage === totalOrdersPages} className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 disabled:opacity-50 hover:bg-gray-50">
+                    Next
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Products preview */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900">Products</h2>
+                <button type="button" onClick={() => setActiveTab("products")} className="text-sm text-[#664C36] font-medium hover:underline">
+                  Manage
+                </button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="bg-gray-50 text-gray-600 text-sm">
+                      <th className="px-6 py-3 font-medium">Image</th>
+                      <th className="px-6 py-3 font-medium">Product</th>
+                      <th className="px-6 py-3 font-medium">Price</th>
+                      <th className="px-6 py-3 font-medium">Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(productsLoading ? [] : products.slice(0, 3)).map((p) => (
+                      <tr key={p.id} className="border-t border-gray-100">
+                        <td className="px-6 py-4">
+                          {productImageUrl(p) ? (
+                            <img src={productImageUrl(p)} alt={p.name} className="w-12 h-12 object-cover rounded-lg" />
+                          ) : (
+                            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs">No img</div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 font-medium text-gray-900">{p.name}</td>
+                        <td className="px-6 py-4 text-gray-600">₱{Number(p.price).toFixed(2)}</td>
+                        <td className="px-6 py-4 text-gray-500 text-sm max-w-[200px] truncate">{p.description || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+
+        {activeTab === "orders" && (
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900">Orders Management</h2>
+              <p className="text-sm text-gray-500 mt-1">View and manage all orders</p>
+            </div>
+            {orders.length === 0 ? (
+              <div className="px-6 py-12 text-center text-gray-500">
+                <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                <p className="text-lg font-medium">No orders yet</p>
+                <p className="text-sm mt-1">Orders will appear here when customers make purchases</p>
+              </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="bg-gray-50 text-gray-600 text-sm">
+                        <th className="px-6 py-3 font-medium">Order ID</th>
+                        <th className="px-6 py-3 font-medium">Customer</th>
+                        <th className="px-6 py-3 font-medium">Email</th>
+                        <th className="px-6 py-3 font-medium">Items</th>
+                        <th className="px-6 py-3 font-medium">Total</th>
+                        <th className="px-6 py-3 font-medium">Payment</th>
+                        <th className="px-6 py-3 font-medium">Status</th>
+                        <th className="px-6 py-3 font-medium">Date</th>
+                        <th className="px-6 py-3 font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedOrders.map((order) => {
+                        const orderDate = new Date(order.createdAt).toLocaleDateString()
+                        const statusColors = {
+                          pending: "bg-amber-100 text-amber-700",
+                          completed: "bg-emerald-100 text-emerald-700",
+                          cancelled: "bg-red-100 text-red-700"
+                        }
+                        return (
+                          <tr key={order.id} className="border-t border-gray-100 hover:bg-gray-50/50">
+                            <td className="px-6 py-4 font-mono font-medium text-gray-900 text-sm">#{order.id}</td>
+                            <td className="px-6 py-4 text-gray-900">{order.shippingInfo?.fullName || 'N/A'}</td>
+                            <td className="px-6 py-4 text-gray-600 text-sm">{order.shippingInfo?.email || 'N/A'}</td>
+                            <td className="px-6 py-4 text-gray-600">{order.items?.length || 0}</td>
+                            <td className="px-6 py-4 font-semibold text-gray-900">₱{order.total?.toFixed(2)}</td>
+                            <td className="px-6 py-4">
+                              <span className="inline-flex px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                                {order.paymentMethod === 'cod' ? 'COD' : 'GCash'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <select
+                                value={order.status}
+                                onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                                className={`px-2.5 py-1 rounded-full text-xs font-medium border-0 cursor-pointer ${statusColors[order.status] || 'bg-gray-100 text-gray-700'}`}
+                              >
+                                <option value="pending">Pending</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
+                              </select>
+                            </td>
+                            <td className="px-6 py-4 text-gray-500 text-sm">{orderDate}</td>
+                            <td className="px-6 py-4">
+                              <button
+                                onClick={() => {
+                                  const orderDetails = `
+Order #${order.id}
+Customer: ${order.shippingInfo?.fullName}
+Email: ${order.shippingInfo?.email}
+Phone: ${order.shippingInfo?.phone}
+Address: ${order.shippingInfo?.address}, ${order.shippingInfo?.city}, ${order.shippingInfo?.zipCode}
+Payment: ${order.paymentMethod === 'cod' ? 'Cash on Delivery' : 'GCash'}
+Total: ₱${order.total?.toFixed(2)}
+Items: ${order.items?.map(item => `\n  - ${item.name} x${item.quantity} (₱${item.price})`).join('')}
+Notes: ${order.shippingInfo?.notes || 'None'}
+                                  `.trim()
+                                  alert(orderDetails)
+                                }}
+                                className="text-[#664C36] hover:text-[#5a4230] font-medium text-sm"
+                              >
+                                View Details
+                              </button>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-between">
+                  <p className="text-sm text-gray-500">
+                    Showing {((ordersPage - 1) * ordersPerPage) + 1} to {Math.min(ordersPage * ordersPerPage, orders.length)} of {orders.length} orders
+                  </p>
+                  <div className="flex gap-2">
+                    <button 
+                      type="button" 
+                      onClick={() => setOrdersPage((p) => Math.max(1, p - 1))} 
+                      disabled={ordersPage === 1} 
+                      className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 disabled:opacity-50 hover:bg-gray-50"
+                    >
+                      Previous
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => setOrdersPage((p) => Math.min(totalOrdersPages, p + 1))} 
+                      disabled={ordersPage === totalOrdersPages || totalOrdersPages === 0} 
+                      className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 disabled:opacity-50 hover:bg-gray-50"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {activeTab === "products" && (
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Product Management</h2>
+                <p className="text-sm text-gray-500 mt-1">Add, edit, or remove products</p>
+              </div>
+              <button type="button" onClick={openAddProduct} className="px-4 py-2 rounded-lg bg-[#664C36] text-white text-sm font-medium hover:bg-[#5a4230] transition-colors inline-flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                Add Product
+              </button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-gray-50 text-gray-600 text-sm">
+                    <th className="px-6 py-3 font-medium">Image</th>
+                    <th className="px-6 py-3 font-medium">Product</th>
+                    <th className="px-6 py-3 font-medium">Description</th>
+                    <th className="px-6 py-3 font-medium">Price</th>
+                    <th className="px-6 py-3 font-medium text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {productsLoading ? (
+                    <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">Loading...</td></tr>
+                  ) : products.length === 0 ? (
+                    <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">No products yet. Add one above.</td></tr>
+                  ) : (
+                    products.map((p) => (
+                      <tr key={p.id} className="border-t border-gray-100 hover:bg-gray-50/50">
+                        <td className="px-6 py-4">
+                          {productImageUrl(p) ? (
+                            <img src={productImageUrl(p)} alt={p.name} className="w-12 h-12 object-cover rounded-lg" />
+                          ) : (
+                            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs">No img</div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 font-medium text-gray-900">{p.name}</td>
+                        <td className="px-6 py-4 text-gray-500 text-sm max-w-[240px] truncate">{p.description || "—"}</td>
+                        <td className="px-6 py-4 text-gray-600">₱{Number(p.price).toFixed(2)}</td>
+                        <td className="px-6 py-4 text-right">
+                          <button type="button" onClick={() => openEditProduct(p)} className="p-2 text-gray-500 hover:text-[#664C36] hover:bg-gray-100 rounded-lg mr-1" title="Edit">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                          </button>
+                          <button type="button" onClick={() => handleDeleteProduct(p.id)} className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Delete">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* Add/Edit Product Modal */}
+      {showProductModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowProductModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">{editingProduct ? "Edit Product" : "Add Product"}</h3>
+            <form onSubmit={handleSaveProduct} className="space-y-4">
+              {formError && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{formError}</p>}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <input type="text" value={formName} onChange={(e) => setFormName(e.target.value)} required className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-[#664C36] focus:border-transparent" placeholder="Product name" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea value={formDescription} onChange={(e) => setFormDescription(e.target.value)} rows={3} className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-[#664C36] focus:border-transparent resize-none" placeholder="Product description" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Price (₱)</label>
+                <input type="number" step="0.01" min="0" value={formPrice} onChange={(e) => setFormPrice(e.target.value)} required className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-[#664C36] focus:border-transparent" placeholder="0.00" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Image</label>
+                <input type="file" accept="image/*" onChange={(e) => setFormImage(e.target.files?.[0] || null)} className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200" />
+                {editingProduct?.image_path && !formImage && (
+                  <p className="text-xs text-gray-500 mt-1">Current: {editingProduct.image_path}. Choose a new file to replace.</p>
+                )}
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowProductModal(false)} className="flex-1 py-2.5 rounded-lg border border-gray-200 text-gray-700 font-medium hover:bg-gray-50">
+                  Cancel
+                </button>
+                <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-lg bg-[#664C36] text-white font-medium hover:bg-[#5a4230] disabled:opacity-60">
+                  {saving ? "Saving..." : editingProduct ? "Save" : "Add"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default AdminDashboard

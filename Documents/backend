@@ -1,0 +1,18 @@
+python -m venv venv
+venv\Scripts\activate
+pip install fastapi uvicorn sqlalchemy psycopg2-binary python-jose passlib[bcrypt] python-dotenv
+pip freeze > requirements.txt
+
+//Never push this to github
+DATABASE_URL=postgresql://postgres:password@localhost:5432/ecommerce_db
+SECRET_KEY=supersecretkey
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+//RUN the server
+uvicorn app.main:app --reload
+
+
+pip install 'pydantic[email]'
+pip install "pydantic[email]"
+python -m pip install "pydantic[email]"
