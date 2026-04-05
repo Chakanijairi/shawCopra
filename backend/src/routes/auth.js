@@ -59,15 +59,30 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ detail: 'Invalid email or password' });
     }
 
-    const isValidPassword = await bcrypt.compare(password, user.hashed_password);
+    const hash = user.hashed_password;
+    if (!hash || typeof hash !== 'string') {
+      console.error('Login: user missing hashed_password for email', email);
+      return res.status(401).json({ detail: 'Invalid email or password' });
+    }
+
+    const isValidPassword = await bcrypt.compare(password, hash);
     if (!isValidPassword) {
       return res.status(401).json({ detail: 'Invalid email or password' });
     }
 
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      console.error('JWT_SECRET is not set — set it in Render environment variables');
+      return res.status(500).json({
+        detail: 'Server configuration error: JWT_SECRET is missing',
+      });
+    }
+
+    const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN }
+      { id: user.id, email: user.email, role: user.role || 'user' },
+      secret,
+      { expiresIn }
     );
 
     res.json({
@@ -81,8 +96,13 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ detail: 'Server error during login' });
+    console.error('Login error:', error.message || error);
+    res.status(500).json({
+      detail:
+        process.env.NODE_ENV === 'production'
+          ? 'Server error during login'
+          : `Server error during login: ${error.message}`,
+    });
   }
 });
 

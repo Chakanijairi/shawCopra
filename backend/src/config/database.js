@@ -1,9 +1,33 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
+const connectionString = process.env.DATABASE_URL || '';
+
+/** Supabase and most cloud Postgres hosts require TLS (not only when NODE_ENV=production). */
+function resolveSsl() {
+  if (!connectionString) return false;
+  const isLocal =
+    connectionString.includes('localhost') ||
+    connectionString.includes('127.0.0.1');
+  if (isLocal && !connectionString.includes('sslmode=require')) {
+    return false;
+  }
+  const needsSsl =
+    process.env.DATABASE_SSL === 'true' ||
+    process.env.NODE_ENV === 'production' ||
+    /supabase\.co|pooler\.supabase|neon\.tech|render\.com|railway\.app/i.test(
+      connectionString
+    ) ||
+    connectionString.includes('sslmode=require');
+  return needsSsl ? { rejectUnauthorized: false } : false;
+}
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  connectionString: connectionString || undefined,
+  ssl: resolveSsl(),
+  max: 10,
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 15_000,
 });
 
 pool.on('connect', () => {
@@ -11,8 +35,7 @@ pool.on('connect', () => {
 });
 
 pool.on('error', (err) => {
-  console.error('❌ Unexpected database error:', err);
-  process.exit(-1);
+  console.error('❌ Database pool error (connection may recover on next query):', err.message);
 });
 
 const initDatabase = async () => {

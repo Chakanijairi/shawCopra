@@ -3,7 +3,7 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
-const { initDatabase } = require('./src/config/database');
+const { initDatabase, pool } = require('./src/config/database');
 const authRoutes = require('./src/routes/auth');
 const productRoutes = require('./src/routes/products');
 const userRoutes = require('./src/routes/users');
@@ -45,8 +45,14 @@ app.use(express.urlencoded({ extended: true }));
 // Must match multer destination in src/routes/products.js (backend/uploads)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Server is running' });
+app.get('/health', async (req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.json({ status: 'ok', database: 'connected' });
+  } catch (err) {
+    console.error('Health check DB error:', err.message);
+    res.status(503).json({ status: 'error', database: err.message });
+  }
 });
 
 app.use('/auth', authRoutes);
@@ -60,8 +66,24 @@ app.use((err, req, res, next) => {
   });
 });
 
+function assertProductionEnv() {
+  const db = process.env.DATABASE_URL && String(process.env.DATABASE_URL).trim();
+  const jwt = process.env.JWT_SECRET && String(process.env.JWT_SECRET).trim();
+  if (!db) {
+    console.error('FATAL: DATABASE_URL is not set. Add your Supabase connection string on Render.');
+    process.exit(1);
+  }
+  if (!jwt) {
+    console.error(
+      'FATAL: JWT_SECRET is not set. Add a long random string in Render Environment variables.'
+    );
+    process.exit(1);
+  }
+}
+
 const startServer = async () => {
   try {
+    assertProductionEnv();
     await initDatabase();
     app.listen(PORT, () => {
       console.log(`\n🚀 Server running on http://localhost:${PORT}`);
