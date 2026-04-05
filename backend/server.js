@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const crypto = require('crypto');
 require('dotenv').config();
 
 const { initDatabase, pool } = require('./src/config/database');
@@ -66,24 +67,26 @@ app.use((err, req, res, next) => {
   });
 });
 
-function assertProductionEnv() {
+function ensureEnv() {
   const db = process.env.DATABASE_URL && String(process.env.DATABASE_URL).trim();
-  const jwt = process.env.JWT_SECRET && String(process.env.JWT_SECRET).trim();
   if (!db) {
     console.error('FATAL: DATABASE_URL is not set. Add your Supabase connection string on Render.');
     process.exit(1);
   }
+
+  const jwt = process.env.JWT_SECRET && String(process.env.JWT_SECRET).trim();
   if (!jwt) {
-    console.error(
-      'FATAL: JWT_SECRET is not set. Add a long random string in Render Environment variables.'
+    process.env.JWT_SECRET = crypto.randomBytes(32).toString('hex');
+    console.warn(
+      '⚠️  JWT_SECRET is not set in environment. Using a random secret for this run only. ' +
+        'Add JWT_SECRET in Render → Environment so tokens survive redeploys and restarts.'
     );
-    process.exit(1);
   }
 }
 
 const startServer = async () => {
   try {
-    assertProductionEnv();
+    ensureEnv();
     await initDatabase();
     app.listen(PORT, () => {
       console.log(`\n🚀 Server running on http://localhost:${PORT}`);
