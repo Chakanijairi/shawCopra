@@ -1,5 +1,6 @@
+require('../../loadEnv');
 const { Pool } = require('pg');
-require('dotenv').config();
+const bcrypt = require('bcryptjs');
 
 const connectionString = process.env.DATABASE_URL || '';
 
@@ -123,6 +124,56 @@ const initDatabase = async () => {
       console.log('  ✓ Added created_at column to products table');
     }
 
+    const checkUsersCols2 = await client.query(`
+      SELECT column_name FROM information_schema.columns WHERE table_name='users'
+    `);
+    const uc = checkUsersCols2.rows.map((r) => r.column_name);
+
+    if (!uc.includes('username')) {
+      await client.query(`ALTER TABLE users ADD COLUMN username VARCHAR(120) UNIQUE`);
+      console.log('  ✓ Added username column to users table');
+    }
+
+    if (!uc.includes('admin_request_status')) {
+      await client.query(
+        `ALTER TABLE users ADD COLUMN admin_request_status VARCHAR(20)`
+      );
+      console.log('  ✓ Added admin_request_status column to users table');
+    }
+
+    const checkUsersCols3 = await client.query(`
+      SELECT column_name FROM information_schema.columns WHERE table_name='users'
+    `);
+    const uc3 = checkUsersCols3.rows.map((r) => r.column_name);
+    if (!uc3.includes('gmail_app_password_enc')) {
+      await client.query(
+        `ALTER TABLE users ADD COLUMN gmail_app_password_enc TEXT`
+      );
+      console.log('  ✓ Added gmail_app_password_enc column to users table');
+    }
+
+    const checkUsersCols4 = await client.query(`
+      SELECT column_name FROM information_schema.columns WHERE table_name='users'
+    `);
+    const uc4 = checkUsersCols4.rows.map((r) => r.column_name);
+    if (!uc4.includes('google_sub')) {
+      await client.query(
+        `ALTER TABLE users ADD COLUMN google_sub VARCHAR(255) UNIQUE`
+      );
+      console.log('  ✓ Added google_sub column to users table');
+    }
+
+    const hpNull = await client.query(`
+      SELECT is_nullable FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'hashed_password'
+    `);
+    if (hpNull.rows[0]?.is_nullable === 'NO') {
+      await client.query(
+        `ALTER TABLE users ALTER COLUMN hashed_password DROP NOT NULL`
+      );
+      console.log('  ✓ hashed_password is now nullable (Google-only or optional password)');
+    }
+
     await client.query('COMMIT');
     console.log('✅ Database tables initialized');
   } catch (error) {
@@ -134,4 +185,79 @@ const initDatabase = async () => {
   }
 };
 
-module.exports = { pool, initDatabase };
+async function seedDefaultAdmin() {
+  const email =
+    process.env.DEFAULT_ADMIN_EMAIL?.trim() ||
+    'shawscopra.defaultadmin@gmail.com';
+  const username =
+    process.env.DEFAULT_ADMIN_USERNAME?.trim() || 'Admin';
+  const password =
+    process.env.DEFAULT_ADMIN_PASSWORD !== undefined &&
+    process.env.DEFAULT_ADMIN_PASSWORD !== ''
+      ? process.env.DEFAULT_ADMIN_PASSWORD
+      : '123';
+  const fullName = (
+    process.env.DEFAULT_ADMIN_FULL_NAME || 'Site Administrator'
+  ).trim();
+
+  try {
+    const legacy = await pool.query(
+      `SELECT id FROM users WHERE email = 'shaw@gmail.com'`
+    );
+    if (legacy.rows.length > 0) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      await pool.query(
+        `UPDATE users SET full_name = $1, username = $2, email = $3,
+         hashed_password = $4, role = 'admin', admin_request_status = 'approved'
+         WHERE email = 'shaw@gmail.com'`,
+        [fullName, username, email, hashedPassword]
+      );
+      console.log(`  ✓ Migrated legacy default admin → (${username} / ${email})`);
+      return;
+    }
+
+    const byEmail = await pool.query(
+      `SELECT id FROM users WHERE LOWER(TRIM(email)) = LOWER($1)`,
+      [email]
+    );
+    let targetId =
+      byEmail.rows[0]?.id ||
+      (
+        await pool.query(
+          `SELECT id FROM users
+           WHERE username IS NOT NULL
+             AND TRIM(username) <> ''
+             AND LOWER(TRIM(username)) = LOWER($1)`,
+          [username]
+        )
+      ).rows[0]?.id;
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    if (targetId != null) {
+      await pool.query(
+        `UPDATE users SET full_name = $1, username = $2, email = $3,
+         hashed_password = $4, role = 'admin', admin_request_status = 'approved'
+         WHERE id = $5`,
+        [fullName, username, email, hashedPassword, targetId]
+      );
+      console.log(
+        `  ✓ Synced default admin (username: ${username} — matches .env password)`
+      );
+      return;
+    }
+    await pool.query(
+      `INSERT INTO users (
+        full_name, username, email, hashed_password, role, admin_request_status,
+        shipping_phone, shipping_address
+      ) VALUES ($1, $2, $3, $4, 'admin', 'approved', '', '')`,
+      [fullName, username, email, hashedPassword]
+    );
+    console.log(
+      `  ✓ Seeded default admin (username: ${username} — sign in with username or email)`
+    );
+  } catch (e) {
+    console.error('  ⚠ Default admin seed skipped:', e.message);
+  }
+}
+
+module.exports = { pool, initDatabase, seedDefaultAdmin };

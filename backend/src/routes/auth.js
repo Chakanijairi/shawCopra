@@ -1,109 +1,161 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const { OAuth2Client } = require('google-auth-library');
 const { pool } = require('../config/database');
+const { upsertUserFromGoogleProfile } = require('../lib/googleAuthUser');
 
 const router = express.Router();
+const googleClient = new OAuth2Client();
 
-router.post('/signup', async (req, res) => {
-  console.log('📝 Signup request received:', { body: req.body });
-  try {
-    const { full_name, email, password, role = 'user' } = req.body;
+/**
+ * Same session for every sign-in path: password POST /login, POST /auth/google, Passport OAuth callback.
+ * All issue the same JWT + role shape so the client treats them as one “room”.
+ */
+function buildAuthPayload(user) {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    return null;
+  }
 
-    console.log('Validating fields...');
-    if (!full_name || !email || !password) {
-      console.log('❌ Validation failed: Missing fields');
-      return res.status(400).json({ detail: 'All fields are required' });
-    }
+  const effectiveRole = user.role === 'admin' ? 'admin' : 'user';
+  const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
+  const token = jwt.sign(
+    {
+      id: user.id,
+      email: user.email,
+      role: effectiveRole,
+    },
+    secret,
+    { expiresIn }
+  );
 
-    console.log('Checking for existing user...');
-    const existingUser = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-    if (existingUser.rows.length > 0) {
-      console.log('❌ Email already registered');
-      return res.status(400).json({ detail: 'Email already registered' });
-    }
+  return {
+    access_token: token,
+    token_type: 'bearer',
+    role: effectiveRole,
+    user: {
+      id: user.id,
+      full_name: user.full_name,
+      email: user.email,
+      username: user.username || null,
+    },
+  };
+}
 
-    console.log('Hashing password...');
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    console.log('Inserting user into database...');
-    const result = await pool.query(
-      'INSERT INTO users (full_name, email, hashed_password, role) VALUES ($1, $2, $3, $4) RETURNING id, full_name, email, role',
-      [full_name, email, hashedPassword, role]
-    );
-
-    console.log('✅ User created successfully:', result.rows[0]);
-    res.status(201).json({
-      message: 'User created successfully',
-      user: result.rows[0]
+function issueAuthJson(user, res) {
+  const payload = buildAuthPayload(user);
+  if (!payload) {
+    return res.status(500).json({
+      detail: 'Server configuration error: JWT_SECRET is missing',
     });
-  } catch (error) {
-    console.error('❌ Signup error DETAILS:', error.message);
-    console.error('Full error:', error);
-    res.status(500).json({ detail: `Server error during signup: ${error.message}` });
+  }
+  return res.json(payload);
+}
+
+/** Sign-up with email/password is disabled — use Google sign-in only. */
+router.post('/signup', (req, res) => {
+  res.status(403).json({
+    detail: 'Registration with email and password is disabled. Sign in with Google.',
+  });
+});
+
+/** Google ID token — links to existing user by email or creates a row. */
+router.post('/google', async (req, res) => {
+  const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim();
+  if (!googleClientId) {
+    return res.status(503).json({
+      detail:
+        'Google sign-in is not configured. Set GOOGLE_CLIENT_ID in backend/.env.',
+    });
+  }
+
+  const { credential } = req.body;
+  if (!credential || typeof credential !== 'string') {
+    return res.status(400).json({ detail: 'Missing Google credential' });
+  }
+
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: googleClientId,
+    });
+    const payload = ticket.getPayload();
+    if (!payload?.email) {
+      return res.status(400).json({ detail: 'Google did not return an email address.' });
+    }
+    if (payload.email_verified !== true) {
+      return res.status(400).json({ detail: 'Verify your email with Google before signing in.' });
+    }
+
+    const email = String(payload.email).trim().toLowerCase();
+    const sub = String(payload.sub);
+    const name = String(
+      payload.name || payload.given_name || email.split('@')[0] || 'Customer'
+    ).trim();
+
+    const user = await upsertUserFromGoogleProfile({
+      email,
+      sub,
+      name,
+    });
+
+    return issueAuthJson(user, res);
+  } catch (e) {
+    console.error('Google auth error:', e.message || e);
+    return res.status(401).json({
+      detail:
+        process.env.NODE_ENV === 'production'
+          ? 'Google sign-in failed. Try again.'
+          : `Google sign-in failed: ${e.message}`,
+    });
   }
 });
 
+/** Email/username + password (users with a stored password hash). */
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ detail: 'Email and password are required' });
+    const raw = req.body?.email;
+    const password = req.body?.password;
+    const identifier = typeof raw === 'string' ? raw.trim() : '';
+    if (!identifier || typeof password !== 'string' || !password) {
+      return res.status(400).json({
+        detail: 'Email (or username) and password are required',
+      });
     }
 
-    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-    const user = result.rows[0];
+    const result = await pool.query(
+      `SELECT * FROM users
+       WHERE LOWER(TRIM(email)) = LOWER($1)
+          OR (username IS NOT NULL AND TRIM(username) <> '' AND LOWER(TRIM(username)) = LOWER($1))`,
+      [identifier]
+    );
+
+    const candidates = result.rows;
+    const user =
+      candidates.find((u) => u.hashed_password) || candidates[0];
 
     if (!user) {
       return res.status(401).json({ detail: 'Invalid email or password' });
     }
-
-    const hash = user.hashed_password;
-    if (!hash || typeof hash !== 'string') {
-      console.error('Login: user missing hashed_password for email', email);
-      return res.status(401).json({ detail: 'Invalid email or password' });
-    }
-
-    const isValidPassword = await bcrypt.compare(password, hash);
-    if (!isValidPassword) {
-      return res.status(401).json({ detail: 'Invalid email or password' });
-    }
-
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      console.error('JWT_SECRET is not set — set it in Render environment variables');
-      return res.status(500).json({
-        detail: 'Server configuration error: JWT_SECRET is missing',
+    if (!user.hashed_password) {
+      return res.status(401).json({
+        detail:
+          'No password is set for this account. Use Sign in with Google below.',
       });
     }
 
-    const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role || 'user' },
-      secret,
-      { expiresIn }
-    );
+    const match = await bcrypt.compare(password, user.hashed_password);
+    if (!match) {
+      return res.status(401).json({ detail: 'Invalid email or password' });
+    }
 
-    res.json({
-      access_token: token,
-      token_type: 'bearer',
-      role: user.role,
-      user: {
-        id: user.id,
-        full_name: user.full_name,
-        email: user.email
-      }
-    });
-  } catch (error) {
-    console.error('Login error:', error.message || error);
-    res.status(500).json({
-      detail:
-        process.env.NODE_ENV === 'production'
-          ? 'Server error during login'
-          : `Server error during login: ${error.message}`,
-    });
+    return issueAuthJson(user, res);
+  } catch (e) {
+    console.error('Login error:', e.message);
+    return res.status(500).json({ detail: 'Login failed' });
   }
 });
 
 module.exports = router;
+module.exports.buildAuthPayload = buildAuthPayload;
