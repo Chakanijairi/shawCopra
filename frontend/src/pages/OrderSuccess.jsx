@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import SmartBackButton from '../components/SmartBackButton'
 
 function OrderSuccess() {
   const location = useLocation()
@@ -168,12 +169,12 @@ function OrderSuccess() {
                 >
                   Continue Shopping
                 </Link>
-                <Link
-                  to="/"
-                  className="block text-center text-sm text-gray-600 hover:text-gray-900 py-2"
+                <SmartBackButton
+                  fallbackTo="/"
+                  className="block w-full text-center text-sm text-gray-600 hover:text-gray-900 py-2"
                 >
                   Return to Home
-                </Link>
+                </SmartBackButton>
               </div>
 
               {/* Support Message */}

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { useSignInModal } from '../context/SignInModalContext'
 
 function Orders() {
+  const { openSignIn } = useSignInModal()
   const [orders, setOrders] = useState([])
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [activeTab, setActiveTab] = useState('all')
@@ -47,13 +49,16 @@ function Orders() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
             <h2 className="text-2xl font-semibold text-gray-900 mb-2">Login Required</h2>
-            <p className="text-gray-600 mb-6">Please log in to view your orders</p>
-            <Link
-              to="/login"
-              className="inline-flex px-6 py-3 bg-[#664C36] text-white font-medium rounded-lg hover:bg-[#5a4230] transition-colors"
-            >
-              Login
-            </Link>
+            <p className="text-gray-600 mb-6">Please sign in to view your orders</p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+              <button
+                type="button"
+                onClick={openSignIn}
+                className="inline-flex px-6 py-3 bg-[#664C36] text-white font-medium rounded-lg hover:bg-[#5a4230] transition-colors"
+              >
+                Sign in
+              </button>
+            </div>
           </div>
         </div>
       </div>

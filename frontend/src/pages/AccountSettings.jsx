@@ -1,30 +1,44 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import LogoutModal from '../components/LogoutModal'
+import SmartBackButton from '../components/SmartBackButton'
+import { getUserProfile, clearStoredAuth } from '../lib/api'
+import { useSignInModal } from '../context/SignInModalContext'
 
 function AccountSettings() {
   const navigate = useNavigate()
+  const { openSignIn } = useSignInModal()
   const [user, setUser] = useState(null)
+  const [profile, setProfile] = useState(null)
+  const [profileLoading, setProfileLoading] = useState(true)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
 
   useEffect(() => {
     const token = localStorage.getItem('token')
     const role = localStorage.getItem('role')
-    
+
     if (token) {
       setIsLoggedIn(true)
       setUser({ role })
+      setProfileLoading(true)
+      getUserProfile()
+        .then((p) => setProfile(p))
+        .catch(() => {
+          setProfile(null)
+          setIsLoggedIn(!!localStorage.getItem('token'))
+        })
+        .finally(() => setProfileLoading(false))
     } else {
       setIsLoggedIn(false)
+      setProfileLoading(false)
     }
   }, [])
 
   const handleLogout = () => {
     setShowLogoutModal(true)
-    
-    localStorage.removeItem('token')
-    localStorage.removeItem('role')
+
+    clearStoredAuth()
     setIsLoggedIn(false)
     setUser(null)
     
@@ -46,20 +60,15 @@ function AccountSettings() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
             <h2 className="text-2xl font-semibold text-gray-900 mb-2">Not Logged In</h2>
-            <p className="text-gray-600 mb-6">Please log in to access your account settings</p>
-            <div className="flex gap-4 justify-center">
-              <Link
-                to="/login"
-                className="px-6 py-3 bg-[#664C36] text-white font-medium rounded-lg hover:bg-[#5a4230] transition-colors"
+            <p className="text-gray-600 mb-6">Please sign in to access your account settings</p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+              <button
+                type="button"
+                onClick={openSignIn}
+                className="inline-flex px-6 py-3 bg-[#664C36] text-white font-medium rounded-lg hover:bg-[#5a4230] transition-colors"
               >
-                Login
-              </Link>
-              <Link
-                to="/register"
-                className="px-6 py-3 border-2 border-[#664C36] text-[#664C36] font-medium rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Register
-              </Link>
+                Sign in
+              </button>
             </div>
           </div>
         </div>
@@ -77,9 +86,9 @@ function AccountSettings() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold text-gray-900">Account Settings</h1>
-            <Link to="/" className="text-[#664C36] hover:text-[#5a4230] font-medium">
+            <SmartBackButton fallbackTo="/" className="text-[#664C36] hover:text-[#5a4230] font-medium">
               ← Back to Home
-            </Link>
+            </SmartBackButton>
           </div>
         </div>
       </div>
@@ -99,10 +108,15 @@ function AccountSettings() {
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">
-                  {user?.role === 'admin' ? 'Administrator' : 'User Account'}
+                  {profileLoading
+                    ? '…'
+                    : profile?.username?.trim() ||
+                      profile?.full_name?.trim() ||
+                      profile?.email?.split('@')[0] ||
+                      'Account'}
                 </h3>
-                <p className="text-sm text-gray-600">
-                  Role: <span className="font-medium text-[#664C36]">{user?.role?.toUpperCase()}</span>
+                <p className="text-sm text-gray-600 break-all">
+                  {profileLoading ? 'Loading…' : profile?.email || '—'}
                 </p>
               </div>
             </div>

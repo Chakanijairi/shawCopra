@@ -2,20 +2,9 @@ import { useEffect } from 'react'
 import './OrderSuccessModal.css'
 
 function OrderSuccessModal({ isOpen, onClose, orderId }) {
-  console.log('🎯 Modal Component Rendered')
-  console.log('  - isOpen:', isOpen)
-  console.log('  - orderId:', orderId)
-  
-  // Removed auto-close timer - modal stays open until user clicks close
-  
-  console.log('🎬 About to render, isOpen:', isOpen)
-  
   if (!isOpen) {
-    console.log('❌ Not rendering - isOpen is false')
     return null
   }
-
-  console.log('✨ Rendering modal!')
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 order-modal-fadeIn order-modal-backdrop" style={{ background: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(4px)' }}>

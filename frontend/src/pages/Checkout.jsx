@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import SmartBackButton from '../components/SmartBackButton'
 import { useCart } from '../context/CartContext'
-import { getUserProfile, updateShippingInfo } from '../lib/api'
+import { getUserProfile, updateShippingInfo, notifyAdminNewOrder } from '../lib/api'
+import { useSignInModal } from '../context/SignInModalContext'
 import OrderSuccessModal from '../components/OrderSuccessModal'
 
 /** GCash mobile app deep link (official scheme used by payment providers). */
@@ -64,6 +66,7 @@ function tryOpenGcashApp(onUnavailable) {
 
 function Checkout() {
   const navigate = useNavigate()
+  const { openSignIn } = useSignInModal()
   const { cart, getCartTotal, clearCart } = useCart()
 
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -90,12 +93,17 @@ function Checkout() {
   useEffect(() => {
     const token = localStorage.getItem('token')
     if (!token) {
-      navigate('/login')
+      openSignIn()
+      navigate('/cart', { replace: true })
+      return
+    }
+    if (localStorage.getItem('role') === 'admin') {
+      navigate('/cart', { replace: true })
       return
     }
     setIsLoggedIn(true)
     loadUserProfile()
-  }, [navigate])
+  }, [navigate, openSignIn])
 
   const loadUserProfile = async () => {
     try {
@@ -111,6 +119,10 @@ function Checkout() {
       }))
     } catch (error) {
       console.error('Failed to load profile:', error)
+      if (!localStorage.getItem('token')) {
+        openSignIn()
+        navigate('/cart', { replace: true })
+      }
     } finally {
       setLoadingProfile(false)
     }
@@ -149,6 +161,10 @@ function Checkout() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (localStorage.getItem('role') === 'admin') {
+      navigate('/cart', { replace: true })
+      return
+    }
     setLoading(true)
 
     try {
@@ -186,6 +202,22 @@ function Checkout() {
       localStorage.setItem('orders', JSON.stringify(existingOrders))
 
       console.log('✅ Order saved:', newOrder.id)
+
+      const itemLines = cart.map((i) => {
+        const qty = i.quantity || 1
+        const lineTotal = Number(i.price || 0) * qty
+        return `${i.name || 'Item'} ×${qty} — ₱${lineTotal.toFixed(2)}`
+      })
+      void notifyAdminNewOrder({
+        order: {
+          id: newOrder.id,
+          total: newOrder.total,
+          paymentMethod: newOrder.paymentMethod,
+          shippingInfo: newOrder.shippingInfo,
+          itemLines,
+        },
+        totalOrdersInStore: existingOrders.length,
+      })
 
       setOrderPlaced(true)
       setCurrentOrderId(newOrder.id)
@@ -233,9 +265,9 @@ function Checkout() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
           <div className="mb-8">
-            <Link to="/cart" className="text-[#664C36] hover:text-[#5a4230] font-medium">
+            <SmartBackButton fallbackTo="/cart" className="text-[#664C36] hover:text-[#5a4230] font-medium">
               ← Back to Cart
-            </Link>
+            </SmartBackButton>
             <h1 className="text-3xl font-bold text-gray-900 mt-2">Checkout</h1>
           </div>
 

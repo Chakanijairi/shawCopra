@@ -46,7 +46,6 @@ function ContactUs() {
             <div className="group">
               <h3 className="font-bold text-gray-900 mb-1 group-hover:text-[#664C36] transition-colors">Talk to us</h3>
               <p className="text-gray-700">+63 9538893345</p>
-              <p className="text-gray-700">chawkanijairi8@gmail.com</p>
             </div>
             <div className="group">
               <h3 className="font-bold text-gray-900 mb-1 group-hover:text-[#664C36] transition-colors">Location</h3>

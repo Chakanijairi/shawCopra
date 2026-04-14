@@ -1,23 +1,34 @@
 import { useCart } from '../context/CartContext'
 import { Link, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import { isAdmin } from '../lib/roles'
+import { useSignInModal } from '../context/SignInModalContext'
+import SmartBackButton from '../components/SmartBackButton'
 
 function Cart() {
   const { cart, removeFromCart, updateQuantity, clearCart, getCartTotal, getCartCount } = useCart()
   const navigate = useNavigate()
+  const { openSignIn } = useSignInModal()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    setIsLoggedIn(!!token)
+    const sync = () => setIsLoggedIn(!!localStorage.getItem('token'))
+    sync()
+    window.addEventListener('shaw-auth-changed', sync)
+    return () => window.removeEventListener('shaw-auth-changed', sync)
   }, [])
+
+  const adminUser = isAdmin()
 
   const handleCheckout = () => {
     if (!isLoggedIn) {
-      navigate('/login')
-    } else {
-      navigate('/checkout')
+      openSignIn()
+      return
     }
+    if (isAdmin()) {
+      return
+    }
+    navigate('/checkout')
   }
 
   if (cart.length === 0) {
@@ -31,12 +42,20 @@ function Cart() {
             </svg>
             <h2 className="text-2xl font-semibold text-gray-900 mb-2">Your cart is empty</h2>
             <p className="text-gray-600 mb-6">Add some products to get started!</p>
-            <Link
-              to="/products"
-              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-[#664C36] hover:bg-[#5a4230] transition-colors"
-            >
-              Browse Products
-            </Link>
+            <div className="flex flex-col items-center gap-4">
+              <Link
+                to="/products"
+                className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-[#664C36] hover:bg-[#5a4230] transition-colors"
+              >
+                Browse Products
+              </Link>
+              <SmartBackButton
+                fallbackTo="/"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-[#664C36] hover:text-[#5a4230] hover:underline"
+              >
+                <span aria-hidden="true">←</span> Back to home
+              </SmartBackButton>
+            </div>
           </div>
         </div>
       </div>
@@ -145,6 +164,15 @@ function Cart() {
                 </div>
               </div>
 
+              {adminUser && (
+                <div className="mb-4 p-4 bg-slate-100 border border-slate-200 rounded-lg">
+                  <p className="text-sm font-semibold text-slate-800">Administrator account</p>
+                  <p className="text-xs text-slate-600 mt-1">
+                    You can manage the store from the admin dashboard. Purchases are only available when signed in as a customer.
+                  </p>
+                </div>
+              )}
+
               {!isLoggedIn && (
                 <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                   <div className="flex items-start gap-3">
@@ -160,30 +188,38 @@ function Cart() {
               )}
 
               <button
+                type="button"
                 onClick={handleCheckout}
-                className="w-full py-3 px-4 bg-[#664C36] text-white font-semibold rounded-lg hover:bg-[#5a4230] transition-colors mb-3"
+                disabled={adminUser}
+                className={`w-full py-3 px-4 font-semibold rounded-lg transition-colors mb-3 ${
+                  adminUser
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : "bg-[#664C36] text-white hover:bg-[#5a4230]"
+                }`}
               >
-                {isLoggedIn ? 'Proceed to Checkout' : 'Login to Checkout'}
+                {!isLoggedIn ? "Login to Checkout" : adminUser ? "Checkout not available for admins" : "Proceed to Checkout"}
               </button>
 
               {!isLoggedIn && (
-                <div className="text-center">
-                  <p className="text-xs text-gray-600 mb-2">Don't have an account?</p>
-                  <Link
-                    to="/register"
-                    className="text-sm text-[#664C36] hover:text-[#5a4230] font-medium"
+                <p className="text-center text-xs text-gray-600">
+                  Use{" "}
+                  <button
+                    type="button"
+                    onClick={openSignIn}
+                    className="text-[#664C36] font-medium hover:underline"
                   >
-                    Register here
-                  </Link>
-                </div>
+                    Sign in
+                  </button>{" "}
+                  (Google in the window) to check out.
+                </p>
               )}
 
-              <Link
-                to="/"
-                className="block text-center text-sm text-[#664C36] hover:text-[#5a4230] font-medium mt-4"
+              <SmartBackButton
+                fallbackTo="/"
+                className="block w-full text-center text-sm text-[#664C36] hover:text-[#5a4230] font-medium mt-4"
               >
                 Back to Home
-              </Link>
+              </SmartBackButton>
             </div>
           </div>
         </div>

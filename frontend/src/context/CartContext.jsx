@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import { canPurchase } from '../lib/roles'
 
 const CartContext = createContext()
 
@@ -17,9 +18,10 @@ export function CartProvider({ children }) {
   }, [cart])
 
   const addToCart = (product) => {
+    if (!canPurchase()) return false
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.id === product.id)
-      
+
       if (existingItem) {
         return prevCart.map((item) =>
           item.id === product.id
@@ -27,9 +29,10 @@ export function CartProvider({ children }) {
             : item
         )
       }
-      
+
       return [...prevCart, { ...product, quantity: 1 }]
     })
+    return true
   }
 
   const removeFromCart = (productId) => {
@@ -41,12 +44,16 @@ export function CartProvider({ children }) {
       removeFromCart(productId)
       return
     }
-    
-    setCart((prevCart) =>
-      prevCart.map((item) =>
+
+    setCart((prevCart) => {
+      if (!canPurchase()) {
+        const item = prevCart.find((i) => i.id === productId)
+        if (item && quantity > item.quantity) return prevCart
+      }
+      return prevCart.map((item) =>
         item.id === productId ? { ...item, quantity } : item
       )
-    )
+    })
   }
 
   const clearCart = () => {

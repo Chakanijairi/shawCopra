@@ -1,22 +1,39 @@
 import { useState, useEffect } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useNavigate, useLocation } from "react-router-dom"
 import { useCart } from "../context/CartContext"
+import { clearStoredAuth } from "../lib/api"
+import { getStoredGoogleProfile } from "../lib/googleSession"
+import { useSignInModal } from "../context/SignInModalContext"
 import LogoutModal from "./LogoutModal"
 
 function Navbar() {
   const { getCartCount } = useCart()
   const navigate = useNavigate()
+  const location = useLocation()
   const cartCount = getCartCount()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [userRole, setUserRole] = useState(null)
+  const [googleProfile, setGoogleProfile] = useState(null)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
-  
-  useEffect(() => {
-    const token = localStorage.getItem('token')
-    const role = localStorage.getItem('role')
+  const { openSignIn } = useSignInModal()
+
+  const syncAuthFromStorage = () => {
+    const token = localStorage.getItem("token")
+    const role = localStorage.getItem("role")
     setIsLoggedIn(!!token)
     setUserRole(role)
+    setGoogleProfile(getStoredGoogleProfile())
+  }
+
+  useEffect(() => {
+    syncAuthFromStorage()
+  }, [location.pathname])
+
+  useEffect(() => {
+    const onAuth = () => syncAuthFromStorage()
+    window.addEventListener("shaw-auth-changed", onAuth)
+    return () => window.removeEventListener("shaw-auth-changed", onAuth)
   }, [])
 
   const navLinks = [
@@ -31,14 +48,14 @@ function Navbar() {
   const handleLogout = () => {
     setIsMenuOpen(false)
     setShowLogoutModal(true)
-    
-    localStorage.removeItem('token')
-    localStorage.removeItem('role')
+
+    clearStoredAuth()
     setIsLoggedIn(false)
     setUserRole(null)
-    
+    setGoogleProfile(null)
+
     setTimeout(() => {
-      navigate('/')
+      navigate("/")
     }, 2000)
   }
 
@@ -89,11 +106,44 @@ function Navbar() {
               </span>
             )}
           </Link>
-          <Link to={isLoggedIn ? "/account" : "/login"} className="p-2 text-gray-700 hover:text-amber-700 rounded-lg hover:bg-gray-100" aria-label="Profile">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          </Link>
+          {isLoggedIn ? (
+            <Link
+              to="/account"
+              className="p-1 text-gray-700 hover:text-amber-700 rounded-full hover:bg-gray-100 overflow-hidden"
+              aria-label="Profile"
+            >
+              {googleProfile?.picture ? (
+                <img
+                  src={googleProfile.picture}
+                  alt=""
+                  className="w-8 h-8 rounded-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <span className="inline-flex p-1.5">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </span>
+              )}
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setIsMenuOpen(false)
+                openSignIn()
+              }}
+              className="p-1 text-gray-700 hover:text-amber-700 rounded-full hover:bg-gray-100 overflow-hidden"
+              aria-label="Sign in"
+            >
+              <span className="inline-flex p-1.5">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </span>
+            </button>
+          )}
           <span className="w-px h-6 bg-gray-300 mx-1" aria-hidden="true" />
           <div className="relative">
             <button 
@@ -118,9 +168,35 @@ function Navbar() {
                   {isLoggedIn ? (
                     <>
                       {/* User Info Section */}
-                      <div className="px-4 py-3 border-b border-gray-200">
-                        <p className="text-sm font-medium text-gray-900">Logged in as</p>
-                        <p className="text-sm text-[#664C36] font-semibold">{userRole?.toUpperCase()}</p>
+                      <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-3">
+                        {googleProfile?.picture ? (
+                          <img
+                            src={googleProfile.picture}
+                            alt=""
+                            className="w-10 h-10 rounded-full object-cover shrink-0"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-gray-200 shrink-0 flex items-center justify-center text-gray-500 text-xs font-medium">
+                            {(userRole || "?").toString().slice(0, 1).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          {googleProfile ? (
+                            <>
+                              <p className="text-sm font-medium text-gray-900 truncate">{googleProfile.name}</p>
+                              <p className="text-xs text-gray-500 truncate">{googleProfile.email}</p>
+                              {userRole && (
+                                <p className="text-xs text-[#664C36] font-semibold mt-0.5">{userRole.toUpperCase()}</p>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-sm font-medium text-gray-900">Logged in as</p>
+                              <p className="text-sm text-[#664C36] font-semibold">{userRole?.toUpperCase()}</p>
+                            </>
+                          )}
+                        </div>
                       </div>
 
                       {/* Menu Items */}
@@ -195,27 +271,19 @@ function Navbar() {
                         <p className="text-sm text-gray-600">Not logged in</p>
                       </div>
 
-                      <Link
-                        to="/login"
-                        onClick={() => setIsMenuOpen(false)}
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMenuOpen(false)
+                          openSignIn()
+                        }}
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors w-full text-left"
                       >
                         <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
                         </svg>
-                        <span className="text-sm font-medium text-gray-900">Login</span>
-                      </Link>
-
-                      <Link
-                        to="/register"
-                        onClick={() => setIsMenuOpen(false)}
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
-                      >
-                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                        </svg>
-                        <span className="text-sm font-medium text-gray-900">Register</span>
-                      </Link>
+                        <span className="text-sm font-medium text-gray-900">Sign in</span>
+                      </button>
 
                       <Link
                         to="/cart"

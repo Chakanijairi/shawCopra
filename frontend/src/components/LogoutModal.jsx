@@ -15,10 +15,10 @@ function LogoutModal({ isOpen, onClose }) {
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black bg-opacity-50 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full transform animate-slideUp">
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black bg-opacity-50 backdrop-blur-sm animate-logout-backdrop">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full transform animate-logout-panel">
         {/* Success Icon with Animation */}
-        <div className="mx-auto w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center mb-6 shadow-lg animate-scaleIn">
+        <div className="mx-auto w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center mb-6 shadow-lg animate-logout-icon">
           <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
           </svg>
@@ -41,62 +41,6 @@ function LogoutModal({ isOpen, onClose }) {
           Redirecting to home page...
         </p>
       </div>
-
-      <style jsx>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
-
-        @keyframes slideUp {
-          from {
-            transform: translateY(20px);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-          }
-        }
-
-        @keyframes scaleIn {
-          from {
-            transform: scale(0);
-          }
-          to {
-            transform: scale(1);
-          }
-        }
-
-        @keyframes progress {
-          from {
-            width: 0%;
-          }
-          to {
-            width: 100%;
-          }
-        }
-
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-out;
-        }
-
-        .animate-slideUp {
-          animation: slideUp 0.4s ease-out;
-        }
-
-        .animate-scaleIn {
-          animation: scaleIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-        }
-
-        .animate-progress {
-          animation: progress 2s linear;
-        }
-      `}</style>
     </div>
   )
 }

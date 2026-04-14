@@ -1,6 +1,17 @@
 import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
-import { getProducts, createProduct, updateProduct, deleteProduct, API_URL } from "../lib/api"
+import {
+  getProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  getOrderNotificationTemplates,
+  sendOrderCustomerEmail,
+  emailAdminOrdersSummary,
+  API_URL,
+  clearStoredAuth,
+} from "../lib/api"
+import GmailOpenLink from "../components/GmailOpenLink"
 
 const SIDEBAR_LINKS = [
   { label: "Dashboard", id: "dashboard", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
@@ -22,8 +33,28 @@ function AdminDashboard() {
   const [formImage, setFormImage] = useState(null)
   const [formError, setFormError] = useState("")
   const [saving, setSaving] = useState(false)
+  const [orderEmailTemplates, setOrderEmailTemplates] = useState([])
+  const [notifyTemplateByOrder, setNotifyTemplateByOrder] = useState({})
+  const [sendingOrderId, setSendingOrderId] = useState(null)
+  const [emailingDigest, setEmailingDigest] = useState(false)
 
   const ordersPerPage = 5
+
+  useEffect(() => {
+    if (activeTab !== "orders") return
+    getOrderNotificationTemplates()
+      .then((data) => setOrderEmailTemplates(data.templates || []))
+      .catch(() =>
+        setOrderEmailTemplates([
+          { id: "delivery_in_10_min", label: "Delivering in ~10 minutes" },
+          { id: "order_confirmed_preparing", label: "Order confirmed — preparing" },
+          { id: "out_for_delivery", label: "Out for delivery" },
+          { id: "delivered_complete", label: "Delivered — thank you" },
+          { id: "order_delayed", label: "Order delayed (apology)" },
+          { id: "payment_received", label: "Payment received" },
+        ])
+      )
+  }, [activeTab])
 
   useEffect(() => {
     const load = async () => {
@@ -63,6 +94,76 @@ function AdminDashboard() {
     )
     localStorage.setItem('orders', JSON.stringify(updatedOrders))
     setOrders(updatedOrders.reverse())
+  }
+
+  const recordOrderEmailNotification = (orderId, templateId) => {
+    const allOrders = JSON.parse(localStorage.getItem("orders") || "[]")
+    const updatedOrders = allOrders.map((order) =>
+      order.id === orderId
+        ? {
+            ...order,
+            emailUpdates: [
+              ...(order.emailUpdates || []),
+              { templateId, sentAt: new Date().toISOString() },
+            ],
+          }
+        : order
+    )
+    localStorage.setItem("orders", JSON.stringify(updatedOrders))
+    setOrders(updatedOrders.reverse())
+  }
+
+  const handleEmailOrdersSummary = async () => {
+    let raw = []
+    try {
+      raw = JSON.parse(localStorage.getItem("orders") || "[]")
+    } catch {
+      raw = []
+    }
+    if (!Array.isArray(raw) || raw.length === 0) {
+      alert("No orders to summarize.")
+      return
+    }
+    setEmailingDigest(true)
+    try {
+      await emailAdminOrdersSummary(raw)
+      alert("Summary sent to the admin inbox. Check Spam if needed.")
+    } catch (e) {
+      alert(e.message || "Failed to send summary email")
+    } finally {
+      setEmailingDigest(false)
+    }
+  }
+
+  const handleSendOrderEmail = async (order) => {
+    const templateId = notifyTemplateByOrder[order.id]
+    if (!templateId) {
+      alert("Choose an update message from the list first.")
+      return
+    }
+    const email = order.shippingInfo?.email?.trim()
+    if (!email) {
+      alert("This order has no customer email.")
+      return
+    }
+    setSendingOrderId(order.id)
+    try {
+      const res = await sendOrderCustomerEmail({
+        email,
+        customerName: order.shippingInfo?.fullName || "",
+        orderId: order.id,
+        templateId,
+      })
+      recordOrderEmailNotification(order.id, templateId)
+      alert(
+        (res.message || "Email sent.") +
+          "\n\nThe customer should see it in their Gmail inbox (and Spam if needed)."
+      )
+    } catch (e) {
+      alert(e.message || "Failed to send email")
+    } finally {
+      setSendingOrderId(null)
+    }
   }
 
   const openAddProduct = () => {
@@ -151,7 +252,7 @@ function AdminDashboard() {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
             View Store
           </Link>
-          <Link to="/login" onClick={() => { localStorage.removeItem("token"); localStorage.removeItem("role"); }} className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 text-sm font-medium mt-1">
+          <Link to="/" onClick={() => clearStoredAuth()} className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 text-sm font-medium mt-1">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
             Logout
           </Link>
@@ -293,9 +394,19 @@ function AdminDashboard() {
 
         {activeTab === "orders" && (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100">
+            <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-lg font-semibold text-gray-900">Orders Management</h2>
-              <p className="text-sm text-gray-500 mt-1">View and manage all orders</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  disabled={emailingDigest || orders.length === 0}
+                  onClick={handleEmailOrdersSummary}
+                  className="text-sm font-medium px-3 py-2 rounded-lg border border-[#664C36] text-[#664C36] hover:bg-[#664C36]/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {emailingDigest ? "Sending summary…" : "Email order summary"}
+                </button>
+                <GmailOpenLink className="shrink-0" />
+              </div>
             </div>
             {orders.length === 0 ? (
               <div className="px-6 py-12 text-center text-gray-500">
@@ -319,6 +430,7 @@ function AdminDashboard() {
                         <th className="px-6 py-3 font-medium">Payment</th>
                         <th className="px-6 py-3 font-medium">Status</th>
                         <th className="px-6 py-3 font-medium">Date</th>
+                        <th className="px-6 py-3 font-medium min-w-[220px]">Email customer</th>
                         <th className="px-6 py-3 font-medium">Actions</th>
                       </tr>
                     </thead>
@@ -354,6 +466,41 @@ function AdminDashboard() {
                               </select>
                             </td>
                             <td className="px-6 py-4 text-gray-500 text-sm">{orderDate}</td>
+                            <td className="px-6 py-4 align-top">
+                              <div className="flex flex-col gap-2 min-w-[200px]">
+                                <select
+                                  value={notifyTemplateByOrder[order.id] || ""}
+                                  onChange={(e) =>
+                                    setNotifyTemplateByOrder((prev) => ({
+                                      ...prev,
+                                      [order.id]: e.target.value,
+                                    }))
+                                  }
+                                  className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-800"
+                                >
+                                  <option value="">Choose update message…</option>
+                                  {orderEmailTemplates.map((t) => (
+                                    <option key={t.id} value={t.id}>
+                                      {t.label}
+                                    </option>
+                                  ))}
+                                </select>
+                                <button
+                                  type="button"
+                                  disabled={sendingOrderId === order.id}
+                                  onClick={() => handleSendOrderEmail(order)}
+                                  className="text-xs font-medium px-3 py-1.5 rounded-lg bg-[#664C36] text-white hover:bg-[#5a4230] disabled:opacity-50"
+                                >
+                                  {sendingOrderId === order.id ? "Sending…" : "Send email"}
+                                </button>
+                                {(order.emailUpdates?.length > 0) && (
+                                  <p className="text-[10px] text-emerald-700">
+                                    {order.emailUpdates.length} update
+                                    {order.emailUpdates.length !== 1 ? "s" : ""} logged
+                                  </p>
+                                )}
+                              </div>
+                            </td>
                             <td className="px-6 py-4">
                               <button
                                 onClick={() => {

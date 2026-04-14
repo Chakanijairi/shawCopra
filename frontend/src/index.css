@@ -39,3 +39,51 @@ button {
 input, textarea {
   font-family: inherit;
 }
+
+/* LogoutModal (avoid non-standard <style jsx> in React) */
+@keyframes logout-modal-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes logout-modal-slide-up {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes logout-modal-scale-in {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+@keyframes logout-modal-progress {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+.animate-logout-backdrop {
+  animation: logout-modal-fade-in 0.3s ease-out;
+}
+.animate-logout-panel {
+  animation: logout-modal-slide-up 0.4s ease-out;
+}
+.animate-logout-icon {
+  animation: logout-modal-scale-in 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+.animate-logout-progress {
+  animation: logout-modal-progress 2s linear;
+}
