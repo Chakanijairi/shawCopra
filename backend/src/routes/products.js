@@ -3,7 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { pool } = require('../config/database');
-const { authMiddleware, adminMiddleware } = require('../middleware/auth');
+const { authMiddleware, adminMiddleware, optionalAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -36,9 +36,14 @@ const upload = multer({
   }
 });
 
-router.get('', async (req, res) => {
+router.get('', optionalAuth, async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM products ORDER BY id DESC');
+    const adminList =
+      req.user?.role === 'admin' && String(req.query.scope || '') === 'admin';
+    const sql = adminList
+      ? 'SELECT * FROM products ORDER BY id DESC'
+      : 'SELECT * FROM products WHERE COALESCE(stock, 0) > 0 ORDER BY id DESC';
+    const result = await pool.query(sql);
     const products = result.rows.map(product => ({
       ...product,
       image_path: product.image_path ? `/uploads/${path.basename(product.image_path)}` : null
@@ -50,13 +55,18 @@ router.get('', async (req, res) => {
   }
 });
 
-router.get('/:id', async (req, res) => {
+router.get('/:id', optionalAuth, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM products WHERE id = $1', [req.params.id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ detail: 'Product not found' });
     }
     const product = result.rows[0];
+    const admin = req.user?.role === 'admin';
+    const stock = product.stock != null ? Number(product.stock) : 0;
+    if (!admin && stock <= 0) {
+      return res.status(404).json({ detail: 'Product not found' });
+    }
     product.image_path = product.image_path ? `/uploads/${path.basename(product.image_path)}` : null;
     res.json(product);
   } catch (error) {
@@ -67,17 +77,18 @@ router.get('/:id', async (req, res) => {
 
 router.post('', authMiddleware, adminMiddleware, upload.single('image'), async (req, res) => {
   try {
-    const { name, description, price } = req.body;
+    const { name, description, price, stock } = req.body;
 
     if (!name || !price) {
       return res.status(400).json({ detail: 'Name and price are required' });
     }
 
     const imagePath = req.file ? req.file.filename : null;
+    const stockNum = Math.max(0, Math.floor(Number.parseInt(String(stock ?? '0'), 10) || 0));
 
     const result = await pool.query(
-      'INSERT INTO products (name, description, price, image_path) VALUES ($1, $2, $3, $4) RETURNING *',
-      [name, description || '', parseFloat(price), imagePath]
+      'INSERT INTO products (name, description, price, image_path, stock) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [name, description || '', parseFloat(price), imagePath, stockNum]
     );
 
     const product = result.rows[0];
@@ -92,8 +103,9 @@ router.post('', authMiddleware, adminMiddleware, upload.single('image'), async (
 
 router.put('/:id', authMiddleware, adminMiddleware, upload.single('image'), async (req, res) => {
   try {
-    const { name, description, price } = req.body;
+    const { name, description, price, stock } = req.body;
     const productId = req.params.id;
+    const stockNum = Math.max(0, Math.floor(Number.parseInt(String(stock ?? '0'), 10) || 0));
 
     const existingProduct = await pool.query('SELECT * FROM products WHERE id = $1', [productId]);
     if (existingProduct.rows.length === 0) {
@@ -113,8 +125,8 @@ router.put('/:id', authMiddleware, adminMiddleware, upload.single('image'), asyn
     }
 
     const result = await pool.query(
-      'UPDATE products SET name = $1, description = $2, price = $3, image_path = $4 WHERE id = $5 RETURNING *',
-      [name, description || '', parseFloat(price), imagePath, productId]
+      'UPDATE products SET name = $1, description = $2, price = $3, image_path = $4, stock = $5 WHERE id = $6 RETURNING *',
+      [name, description || '', parseFloat(price), imagePath, stockNum, productId]
     );
 
     const product = result.rows[0];

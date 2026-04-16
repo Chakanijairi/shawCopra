@@ -60,7 +60,8 @@ const initDatabase = async () => {
         name VARCHAR(255) NOT NULL,
         description TEXT,
         price DECIMAL(10, 2) NOT NULL,
-        image_path VARCHAR(500)
+        image_path VARCHAR(500),
+        stock INTEGER NOT NULL DEFAULT 0
       )
     `);
 
@@ -122,6 +123,11 @@ const initDatabase = async () => {
     if (!productColumns.includes('created_at')) {
       await client.query(`ALTER TABLE products ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
       console.log('  ✓ Added created_at column to products table');
+    }
+
+    if (!productColumns.includes('stock')) {
+      await client.query(`ALTER TABLE products ADD COLUMN stock INTEGER NOT NULL DEFAULT 0`);
+      console.log('  ✓ Added stock column to products table');
     }
 
     const checkUsersCols2 = await client.query(`

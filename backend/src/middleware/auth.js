@@ -34,4 +34,18 @@ const adminMiddleware = (req, res, next) => {
   next();
 };
 
-module.exports = { authMiddleware, adminMiddleware };
+/** Sets `req.user` when a valid Bearer token is present; otherwise `req.user` is left unset. */
+const optionalAuth = (req, res, next) => {
+  req.user = undefined;
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return next();
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+  } catch {
+    // ignore invalid token for public catalog routes
+  }
+  next();
+};
+
+module.exports = { authMiddleware, adminMiddleware, optionalAuth };
