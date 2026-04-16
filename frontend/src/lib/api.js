@@ -111,8 +111,13 @@ export async function signup({ full_name, email, phone, address, password }) {
   return data
 }
 
-export async function getProducts() {
-  const res = await fetch(`${API_URL}/products`)
+/** @param {{ adminScope?: boolean }} [opts] - `adminScope` requests full list (admin dashboard only; requires admin JWT). */
+export async function getProducts(opts = {}) {
+  const token = localStorage.getItem("token")
+  const headers = {}
+  if (token) headers.Authorization = `Bearer ${token}`
+  const q = opts.adminScope ? "?scope=admin" : ""
+  const res = await fetch(`${API_URL}/products${q}`, { headers })
   if (!res.ok) throw new Error("Failed to fetch products")
   return res.json()
 }

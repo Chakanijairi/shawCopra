@@ -30,6 +30,7 @@ function AdminDashboard() {
   const [formName, setFormName] = useState("")
   const [formDescription, setFormDescription] = useState("")
   const [formPrice, setFormPrice] = useState("")
+  const [formStock, setFormStock] = useState("")
   const [formImage, setFormImage] = useState(null)
   const [formError, setFormError] = useState("")
   const [saving, setSaving] = useState(false)
@@ -59,7 +60,7 @@ function AdminDashboard() {
   useEffect(() => {
     const load = async () => {
       try {
-        const data = await getProducts()
+        const data = await getProducts({ adminScope: true })
         setProducts(data)
       } catch {
         setProducts([])
@@ -171,6 +172,7 @@ function AdminDashboard() {
     setFormName("")
     setFormDescription("")
     setFormPrice("")
+    setFormStock("0")
     setFormImage(null)
     setFormError("")
     setShowProductModal(true)
@@ -181,6 +183,7 @@ function AdminDashboard() {
     setFormName(p.name)
     setFormDescription(p.description || "")
     setFormPrice(String(p.price))
+    setFormStock(String(p.stock ?? 0))
     setFormImage(null)
     setFormError("")
     setShowProductModal(true)
@@ -195,6 +198,7 @@ function AdminDashboard() {
       formData.append("name", formName)
       formData.append("description", formDescription)
       formData.append("price", parseFloat(formPrice) || 0)
+      formData.append("stock", Math.max(0, Math.floor(Number.parseInt(String(formStock || "0"), 10) || 0)))
       if (formImage) formData.append("image", formImage)
 
       if (editingProduct) {
@@ -575,7 +579,7 @@ Notes: ${order.shippingInfo?.notes || 'None'}
                     <th className="px-6 py-3 font-medium">Image</th>
                     <th className="px-6 py-3 font-medium">Product</th>
                     <th className="px-6 py-3 font-medium">Description</th>
-                    <th className="px-6 py-3 font-medium">Price</th>
+                    <th className="px-6 py-3 font-medium min-w-[220px]">Price &amp; stock</th>
                     <th className="px-6 py-3 font-medium text-right">Actions</th>
                   </tr>
                 </thead>
@@ -596,7 +600,24 @@ Notes: ${order.shippingInfo?.notes || 'None'}
                         </td>
                         <td className="px-6 py-4 font-medium text-gray-900">{p.name}</td>
                         <td className="px-6 py-4 text-gray-500 text-sm max-w-[240px] truncate">{p.description || "—"}</td>
-                        <td className="px-6 py-4 text-gray-600">₱{Number(p.price).toFixed(2)}</td>
+                        <td className="px-6 py-4 text-gray-600">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <span className="font-semibold text-gray-900">₱{Number(p.price).toFixed(2)}</span>
+                            <span className="text-gray-300 hidden sm:inline" aria-hidden>|</span>
+                            <span className="text-sm">
+                              Stock: <strong className="text-gray-800">{Number(p.stock ?? 0)}</strong>
+                            </span>
+                            <span
+                              className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                Number(p.stock ?? 0) > 0
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : "bg-gray-200 text-gray-600"
+                              }`}
+                            >
+                              {Number(p.stock ?? 0) > 0 ? "Available" : "Unavailable"}
+                            </span>
+                          </div>
+                        </td>
                         <td className="px-6 py-4 text-right">
                           <button type="button" onClick={() => openEditProduct(p)} className="p-2 text-gray-500 hover:text-[#664C36] hover:bg-gray-100 rounded-lg mr-1" title="Edit">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
@@ -633,6 +654,20 @@ Notes: ${order.shippingInfo?.notes || 'None'}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Price (₱)</label>
                 <input type="number" step="0.01" min="0" value={formPrice} onChange={(e) => setFormPrice(e.target.value)} required className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-[#664C36] focus:border-transparent" placeholder="0.00" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Stock (units)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={formStock}
+                  onChange={(e) => setFormStock(e.target.value)}
+                  required
+                  className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-[#664C36] focus:border-transparent"
+                  placeholder="0"
+                />
+                <p className="text-xs text-gray-500 mt-1">0 stock shows as Unavailable in the list.</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Image</label>
