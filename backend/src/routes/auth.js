@@ -189,6 +189,8 @@ router.post('/login', async (req, res) => {
 });
 
 module.exports = router;
+/** Used by Passport OAuth callback in `passportApp.js`. */
+module.exports.buildAuthPayload = buildAuthPayload;
 
 
 
