@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useSignInModal } from '../context/SignInModalContext'
 import { priceNumber } from '../lib/prices'
-import { API_URL } from '../lib/api'
 
 function Orders() {
   const { openSignIn } = useSignInModal()
@@ -170,7 +169,7 @@ function Orders() {
                           <div className="w-20 h-20 bg-gray-100 rounded flex-shrink-0">
                             {item.image_path && (
                               <img
-                                src={`${API_URL}${item.image_path}`}
+                                src={item.image_path}
                                 alt={item.name}
                                 className="w-full h-full object-cover rounded"
                               />

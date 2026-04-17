@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { Link, useSearchParams, useLocation } from "react-router-dom"
-import { getProducts, API_URL } from "../lib/api"
+import { getProducts } from "../lib/api"
 import { useCart } from "../context/CartContext"
 import { isAdmin } from "../lib/roles"
 import { useSignInModal } from "../context/SignInModalContext"
@@ -56,8 +56,6 @@ function Products() {
   }
 
   const adminUser = isAdmin()
-
-  const productImageUrl = (p) => (p.image_path ? `${API_URL}${p.image_path}` : null)
 
   const setQuery = (value) => {
     const next = new URLSearchParams(searchParams)
@@ -174,9 +172,9 @@ function Products() {
                 >
                   {/* Product Image */}
                   <div className="aspect-square bg-gray-100 overflow-hidden relative">
-                    {productImageUrl(product) ? (
+                    {product.image_path ? (
                       <img
-                        src={productImageUrl(product)}
+                        src={product.image_path}
                         alt={product.name}
                         className="w-full h-full object-cover"
                       />

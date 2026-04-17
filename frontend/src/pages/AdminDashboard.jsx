@@ -9,7 +9,6 @@ import {
   getEmailConfig,
   sendOrderCustomerEmail,
   emailAdminOrdersSummary,
-  API_URL,
   clearStoredAuth,
 } from "../lib/api"
 import GmailOpenLink from "../components/GmailOpenLink"
@@ -232,8 +231,6 @@ function AdminDashboard() {
     }
   }
 
-  const productImageUrl = (p) => (p.image_path ? `${API_URL}${p.image_path}` : null)
-
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
@@ -384,8 +381,8 @@ function AdminDashboard() {
                     {(productsLoading ? [] : products.slice(0, 3)).map((p) => (
                       <tr key={p.id} className="border-t border-gray-100">
                         <td className="px-6 py-4">
-                          {productImageUrl(p) ? (
-                            <img src={productImageUrl(p)} alt={p.name} className="w-12 h-12 object-cover rounded-lg" />
+                          {p.image_path ? (
+                            <img src={p.image_path} alt={p.name} className="w-12 h-12 object-cover rounded-lg" />
                           ) : (
                             <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs">No img</div>
                           )}
@@ -611,8 +608,8 @@ Notes: ${order.shippingInfo?.notes || 'None'}
                     products.map((p) => (
                       <tr key={p.id} className="border-t border-gray-100 hover:bg-gray-50/50">
                         <td className="px-6 py-4">
-                          {productImageUrl(p) ? (
-                            <img src={productImageUrl(p)} alt={p.name} className="w-12 h-12 object-cover rounded-lg" />
+                          {p.image_path ? (
+                            <img src={p.image_path} alt={p.name} className="w-12 h-12 object-cover rounded-lg" />
                           ) : (
                             <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs">No img</div>
                           )}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { Link, useParams } from "react-router-dom"
-import { getProduct, API_URL } from "../lib/api"
+import { getProduct } from "../lib/api"
 import { useCart } from "../context/CartContext"
 import { isAdmin } from "../lib/roles"
 import { useSignInModal } from "../context/SignInModalContext"
@@ -34,8 +34,6 @@ function ProductDetail() {
       cancelled = true
     }
   }, [id])
-
-  const productImageUrl = (p) => (p?.image_path ? `${API_URL}${p.image_path}` : null)
 
   const handleAdd = () => {
     if (!product || adminUser) return
@@ -99,9 +97,9 @@ function ProductDetail() {
         {!loading && product && (
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
             <div className="aspect-square md:aspect-[4/3] bg-gray-100 max-h-[420px]">
-              {productImageUrl(product) ? (
+              {product.image_path ? (
                 <img
-                  src={productImageUrl(product)}
+                  src={product.image_path}
                   alt={product.name}
                   className="w-full h-full object-cover"
                 />
