@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import SmartBackButton from '../components/SmartBackButton'
 import { useCart } from '../context/CartContext'
-import { getUserProfile, updateShippingInfo, notifyAdminNewOrder } from '../lib/api'
+import { getUserProfile, updateShippingInfo, notifyAdminNewOrder, purchaseDeductStock } from '../lib/api'
 import { useSignInModal } from '../context/SignInModalContext'
 import OrderSuccessModal from '../components/OrderSuccessModal'
 
@@ -181,6 +181,13 @@ function Checkout() {
           console.error('Failed to save shipping info:', error)
         }
       }
+
+      await purchaseDeductStock(
+        cart.map((item) => ({
+          id: item.id,
+          quantity: item.quantity,
+        }))
+      )
 
       const orderData = {
         items: cart,

@@ -165,6 +165,39 @@ export async function deleteProduct(id) {
   if (!res.ok) throw new Error("Failed to delete product")
 }
 
+/**
+ * Deducts `stock` in the database for each cart line when an order is placed.
+ * @param {Array<{ id: number, quantity: number }>} items
+ */
+export async function purchaseDeductStock(items) {
+  const token = localStorage.getItem("token")
+  if (!token) {
+    throw new Error("Please sign in to complete your order.")
+  }
+  let res
+  try {
+    res = await fetchWithTimeout(`${API_URL}/products/purchase-stock`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ items }),
+    })
+  } catch (err) {
+    rethrowNetworkError(err)
+  }
+  const data = await res.json().catch(() => ({}))
+  if (res.status === 401) {
+    clearStoredAuth()
+    throw new Error(messageFromApiBody(data) || "Session expired. Please sign in again.")
+  }
+  if (!res.ok) {
+    throw new Error(messageFromApiBody(data) || "Could not reserve stock for your order.")
+  }
+  return data
+}
+
 export async function getUserProfile() {
   const token = localStorage.getItem("token")
   if (!token) {

@@ -1,6 +1,21 @@
+import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import HeroTransparentImage from "./HeroTransparentImage"
 
 function Hero() {
+  const [query, setQuery] = useState("")
+  const navigate = useNavigate()
+
+  const handleSearch = (e) => {
+    e.preventDefault()
+    const q = query.trim()
+    if (q) {
+      navigate(`/products?q=${encodeURIComponent(q)}`)
+    } else {
+      navigate("/products")
+    }
+  }
+
   return (
     <section
       id="home"
@@ -38,16 +53,20 @@ function Hero() {
               </div>
             </div>
 
-            <div className="mt-6 flex max-w-xl min-w-0">
+            <form onSubmit={handleSearch} className="mt-6 flex max-w-xl min-w-0">
               <input
-                type="text"
+                type="search"
+                name="q"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search copra, oil..."
+                autoComplete="off"
                 className="flex-1 min-w-0 px-3 sm:px-4 py-3 rounded-l-lg bg-white border-2 border-white text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:outline-none focus:border-white focus:ring-2 focus:ring-amber-300 transition-shadow"
               />
               <button
-                type="button"
+                type="submit"
                 className="shrink-0 px-4 sm:px-5 py-3 bg-white border-2 border-white border-l-0 rounded-r-lg text-gray-800 hover:bg-gray-100 transition-colors btn-press min-w-[44px]"
-                aria-label="Search"
+                aria-label="Search products"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -58,7 +77,7 @@ function Hero() {
                   />
                 </svg>
               </button>
-            </div>
+            </form>
           </div>
 
           <div className="hidden md:block w-72 lg:w-80 flex-shrink-0" />
