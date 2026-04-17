@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useSignInModal } from '../context/SignInModalContext'
+import { priceNumber } from '../lib/prices'
+import { API_URL } from '../lib/api'
 
 function Orders() {
   const { openSignIn } = useSignInModal()
@@ -152,7 +154,7 @@ function Orders() {
                       </div>
                       <div>
                         <p className="text-sm text-gray-600">Total</p>
-                        <p className="font-bold text-[#664C36]">₱{order.total.toFixed(2)}</p>
+                        <p className="font-bold text-[#664C36]">₱{priceNumber(order.total).toFixed(2)}</p>
                       </div>
                     </div>
                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
@@ -168,7 +170,7 @@ function Orders() {
                           <div className="w-20 h-20 bg-gray-100 rounded flex-shrink-0">
                             {item.image_path && (
                               <img
-                                src={`http://localhost:8000${item.image_path}`}
+                                src={`${API_URL}${item.image_path}`}
                                 alt={item.name}
                                 className="w-full h-full object-cover rounded"
                               />
@@ -178,7 +180,7 @@ function Orders() {
                             <h3 className="font-semibold text-gray-900">{item.name}</h3>
                             <p className="text-sm text-gray-600 mt-1">Quantity: {item.quantity}</p>
                             <p className="text-sm font-semibold text-[#664C36] mt-1">
-                              ₱{(item.price * item.quantity).toFixed(2)}
+                              ₱{(priceNumber(item.price) * item.quantity).toFixed(2)}
                             </p>
                           </div>
                         </div>

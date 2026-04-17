@@ -5,6 +5,7 @@ import { useCart } from '../context/CartContext'
 import { getUserProfile, updateShippingInfo, notifyAdminNewOrder, purchaseDeductStock } from '../lib/api'
 import { useSignInModal } from '../context/SignInModalContext'
 import OrderSuccessModal from '../components/OrderSuccessModal'
+import { priceNumber } from '../lib/prices'
 
 /** GCash mobile app deep link (official scheme used by payment providers). */
 const GCASH_APP_URL = 'gcash://'
@@ -212,7 +213,7 @@ function Checkout() {
 
       const itemLines = cart.map((i) => {
         const qty = i.quantity || 1
-        const lineTotal = Number(i.price || 0) * qty
+        const lineTotal = priceNumber(i.price) * qty
         return `${i.name || 'Item'} ×${qty} — ₱${lineTotal.toFixed(2)}`
       })
       void notifyAdminNewOrder({
@@ -416,7 +417,7 @@ function Checkout() {
               {cart.map((item) => (
                 <div key={item.id} className="flex justify-between mb-2">
                   <span>{item.name} x {item.quantity}</span>
-                  <span>₱{(item.price * item.quantity).toFixed(2)}</span>
+                  <span>₱{(priceNumber(item.price) * item.quantity).toFixed(2)}</span>
                 </div>
               ))}
 

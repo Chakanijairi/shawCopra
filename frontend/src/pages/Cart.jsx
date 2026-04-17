@@ -5,6 +5,7 @@ import { isAdmin } from '../lib/roles'
 import { useSignInModal } from '../context/SignInModalContext'
 import SmartBackButton from '../components/SmartBackButton'
 import { API_URL } from '../lib/api'
+import { priceNumber } from '../lib/prices'
 
 function Cart() {
   const { cart, removeFromCart, updateQuantity, clearCart, getCartTotal, getCartCount } = useCart()
@@ -79,7 +80,9 @@ function Cart() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-              {cart.map((item) => (
+              {cart.map((item) => {
+                const unit = priceNumber(item.price)
+                return (
                 <div key={item.id} className="border-b border-gray-200 p-4 sm:p-6 flex flex-row gap-3 sm:gap-4">
                   <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gray-100 rounded-lg overflow-hidden shrink-0">
                     {item.image_path ? (
@@ -100,7 +103,7 @@ function Cart() {
                       <div className="min-w-0">
                         <h3 className="text-base sm:text-lg font-semibold text-gray-900 leading-snug">{item.name}</h3>
                         <p className="text-xs sm:text-sm text-gray-600 mt-0.5 line-clamp-2">{item.description}</p>
-                        <p className="text-sm sm:text-base font-bold text-[#664C36] mt-1">₱{item.price.toFixed(2)}</p>
+                        <p className="text-sm sm:text-base font-bold text-[#664C36] mt-1">₱{unit.toFixed(2)}</p>
                       </div>
                       <button
                         type="button"
@@ -134,12 +137,13 @@ function Cart() {
                         </button>
                       </div>
                       <p className="text-base sm:text-lg font-bold text-gray-900 tabular-nums">
-                        ₱{(item.price * item.quantity).toFixed(2)}
+                        ₱{(unit * item.quantity).toFixed(2)}
                       </p>
                     </div>
                   </div>
                 </div>
-              ))}
+                )
+              })}
             </div>
 
             <button

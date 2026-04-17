@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { canPurchase } from '../lib/roles'
+import { priceNumber } from '../lib/prices'
 
 const CartContext = createContext()
 
@@ -8,8 +9,19 @@ export function CartProvider({ children }) {
 
   useEffect(() => {
     const savedCart = localStorage.getItem('cart')
-    if (savedCart) {
-      setCart(JSON.parse(savedCart))
+    if (!savedCart) return
+    try {
+      const parsed = JSON.parse(savedCart)
+      if (!Array.isArray(parsed)) return
+      setCart(
+        parsed.map((item) => ({
+          ...item,
+          price: priceNumber(item?.price),
+          quantity: Math.max(1, Math.floor(Number(item?.quantity)) || 1),
+        }))
+      )
+    } catch {
+      setCart([])
     }
   }, [])
 
@@ -30,7 +42,10 @@ export function CartProvider({ children }) {
         )
       }
 
-      return [...prevCart, { ...product, quantity: 1 }]
+      return [
+        ...prevCart,
+        { ...product, price: priceNumber(product?.price), quantity: 1 },
+      ]
     })
     return true
   }
@@ -61,7 +76,10 @@ export function CartProvider({ children }) {
   }
 
   const getCartTotal = () => {
-    return cart.reduce((total, item) => total + (item.price * item.quantity), 0)
+    return cart.reduce(
+      (total, item) => total + priceNumber(item.price) * item.quantity,
+      0
+    )
   }
 
   const getCartCount = () => {
