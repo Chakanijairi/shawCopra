@@ -431,25 +431,6 @@ function AdminDashboard() {
                 <GmailOpenLink className="shrink-0" />
               </div>
             </div>
-            <div className="px-4 sm:px-6 py-3 bg-slate-50 border-b border-gray-100 text-sm text-slate-700 space-y-2">
-              <p>
-                <strong className="text-slate-900">Gmail on the server:</strong> Set{" "}
-                <code className="text-xs bg-white px-1 rounded border">GMAIL_USER</code> and{" "}
-                <code className="text-xs bg-white px-1 rounded border">GMAIL_APP_PASSWORD</code> in the API{" "}
-                <code className="text-xs bg-white px-1 rounded border">.env</code> (Render → Environment). Without
-                this, new-order alerts and customer emails will not send.
-              </p>
-              <p>
-                <strong className="text-slate-900">When a customer orders:</strong> the address in{" "}
-                <code className="text-xs bg-white px-1 rounded border">ADMIN_ORDER_NOTIFY_EMAIL</code> (or{" "}
-                <code className="text-xs bg-white px-1 rounded border">ADMIN_GOOGLE_EMAIL</code>) receives a Gmail
-                notification.
-              </p>
-              <p>
-                <strong className="text-slate-900">Customer updates:</strong> choose a message under{" "}
-                <em>Email customer</em>, then <em>Send email</em> — the buyer receives it at the email on the order.
-              </p>
-            </div>
             {orders.length === 0 ? (
               <div className="px-6 py-12 text-center text-gray-500">
                 <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
