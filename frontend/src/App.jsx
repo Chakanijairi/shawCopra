@@ -46,21 +46,23 @@ function AppRoutes() {
 }
 
 export default function App() {
+  const shell = (
+    <div className="min-h-dvh w-full max-w-[100vw]">
+      <AppRoutes />
+    </div>
+  )
+
   if (!googleClientId) {
     return (
       <BrowserRouter>
-        <SignInModalProvider>
-          <AppRoutes />
-        </SignInModalProvider>
+        <SignInModalProvider>{shell}</SignInModalProvider>
       </BrowserRouter>
     )
   }
   return (
     <GoogleOAuthProvider clientId={googleClientId}>
       <BrowserRouter>
-        <SignInModalProvider>
-          <AppRoutes />
-        </SignInModalProvider>
+        <SignInModalProvider>{shell}</SignInModalProvider>
       </BrowserRouter>
     </GoogleOAuthProvider>
   )

@@ -10,7 +10,7 @@ function ContactUs() {
         <p className="text-center text-gray-600 mb-10">
           Feel free to contact us and we will get back to you as soon as we can.
         </p>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-50">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 xl:gap-16">
           {/* Form */}
           <div>
             <form className="space-y-4">
@@ -31,7 +31,7 @@ function ContactUs() {
               />
               <button
                 type="submit"
-                className="w-127 px-6 py-3 rounded-lg bg-[#664C36] text-white font-semibold uppercase tracking-wide hover:bg-amber-800 transition-all duration-300 btn-press hover:shadow-lg"
+                className="w-full max-w-xs sm:w-auto px-6 py-3 rounded-lg bg-[#664C36] text-white font-semibold uppercase tracking-wide hover:bg-amber-800 transition-all duration-300 btn-press hover:shadow-lg min-h-11"
               >
                 SEND
               </button>

@@ -69,7 +69,7 @@ function Reviews() {
                 <div>
                   <p className="font-bold text-gray-900">{t.name}</p>
                   <p className="text-sm text-gray-600">{t.role}</p>
-                  <div className="flex items-center gap-1 mt-15">
+                  <div className="flex items-center gap-1 mt-3">
                     <span className="font-semibold text-gray-900">{t.rating}</span>
                     <div className="flex">
                       {[1, 2, 3, 4, 5].map((star) => (

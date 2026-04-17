@@ -27,10 +27,10 @@ function ShopByCategory() {
 
       {/* CARD + BROWN BACKGROUND WRAPPER */}
       <div className="relative">
-        <div className="absolute inset-x-0 top-15 bottom-0 bg-[#6b4f3a] z-0 rounded-t-[2rem]" />
+        <div className="absolute inset-x-0 top-12 sm:top-16 md:top-[3.75rem] bottom-0 bg-[#6b4f3a] z-0 rounded-t-[2rem]" />
 
-        <div ref={sectionRef} className="relative max-w-6xl mx-auto px-6 z-10 fade-in-up">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 items-start stagger-children">
+        <div ref={sectionRef} className="relative max-w-6xl mx-auto px-4 sm:px-6 z-10 fade-in-up">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-10 items-start stagger-children">
 
             {/* LEFT CARD */}
             <div className="rounded-xl overflow-hidden bg-white shadow-lg card-tilt img-zoom group">
@@ -47,7 +47,7 @@ function ShopByCategory() {
             </div>
 
             {/* MIDDLE CARD */}
-            <div className="rounded-xl overflow-hidden bg-white shadow-lg mt-28 card-tilt img-zoom group">
+            <div className="rounded-xl overflow-hidden bg-white shadow-lg md:mt-28 card-tilt img-zoom group">
               <div className="aspect-[3/4] overflow-hidden">
                 <img
                   src={categories[1].img}

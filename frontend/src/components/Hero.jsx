@@ -4,12 +4,12 @@ function Hero() {
   return (
     <section
       id="home"
-      className="relative bg-[#664C36] rounded-2xl mx-4 mt-4 mb-8 md:mx-6 lg:mx-8 overflow-hidden"
+      className="relative bg-[#664C36] rounded-xl sm:rounded-2xl mx-3 sm:mx-4 mt-3 sm:mt-4 mb-6 sm:mb-8 md:mx-6 lg:mx-8 overflow-hidden"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16 relative z-10">
-        <div className="flex flex-col md:flex-row md:items-stretch md:justify-between gap-8">
-          <div className="text-white flex-1">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 md:py-16 relative z-10">
+        <div className="flex flex-col md:flex-row md:items-stretch md:justify-between gap-6 md:gap-8">
+          <div className="text-white flex-1 min-w-0">
+            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-bold leading-tight">
               <span className="block text-reveal" style={{ animationDelay: "0.1s" }}>
                 From Coconut Farms
               </span>
@@ -38,15 +38,15 @@ function Hero() {
               </div>
             </div>
 
-            <div className="mt-6 flex max-w-xl">
+            <div className="mt-6 flex max-w-xl min-w-0">
               <input
                 type="text"
-                placeholder="Search copra, coconut oil, dried coconut meat..."
-                className="flex-1 px-4 py-3 rounded-l-lg bg-white border-2 border-white text-gray-900 placeholder-gray-500 focus:outline-none focus:border-white focus:ring-2 focus:ring-amber-300 transition-shadow"
+                placeholder="Search copra, oil..."
+                className="flex-1 min-w-0 px-3 sm:px-4 py-3 rounded-l-lg bg-white border-2 border-white text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:outline-none focus:border-white focus:ring-2 focus:ring-amber-300 transition-shadow"
               />
               <button
                 type="button"
-                className="px-5 py-3 bg-white border-2 border-white border-l-0 rounded-r-lg text-gray-800 hover:bg-gray-100 transition-colors btn-press"
+                className="shrink-0 px-4 sm:px-5 py-3 bg-white border-2 border-white border-l-0 rounded-r-lg text-gray-800 hover:bg-gray-100 transition-colors btn-press min-w-[44px]"
                 aria-label="Search"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

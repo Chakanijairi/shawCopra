@@ -67,11 +67,11 @@ function Navbar() {
     <>
       <LogoutModal isOpen={showLogoutModal} onClose={closeLogoutModal} />
       
-      <nav className="sticky top-0 z-50 bg-white shadow-sm py-3">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+      <nav className="sticky top-0 z-50 bg-white shadow-sm py-3 pt-[max(0.75rem,env(safe-area-inset-top,0px))]">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-2 min-w-0">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 text-xl font-semibold text-gray-900 tracking-tight">
-          <span className="font-[cursive] italic">Shaw&apos;s Copra</span>
+        <Link to="/" className="flex items-center gap-2 text-lg sm:text-xl font-semibold text-gray-900 tracking-tight min-w-0 shrink">
+          <span className="font-[cursive] italic truncate">Shaw&apos;s Copra</span>
           <svg className="w-6 h-6 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
           </svg>
@@ -164,7 +164,33 @@ function Navbar() {
                   className="fixed inset-0 z-40" 
                   onClick={() => setIsMenuOpen(false)}
                 />
-                <div className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
+                <div className="absolute right-0 mt-2 w-[min(calc(100vw-1.5rem),288px)] sm:w-72 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50 max-h-[min(85vh,32rem)] overflow-y-auto overscroll-contain">
+                  <div className="px-2 pb-2 border-b border-gray-200 md:hidden">
+                    <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Menu</p>
+                    <ul className="flex flex-col gap-0.5">
+                      {navLinks.map((link) => (
+                        <li key={`dd-${link.label}`}>
+                          {link.isRoute ? (
+                            <Link
+                              to={link.href}
+                              onClick={() => setIsMenuOpen(false)}
+                              className="block rounded-md px-3 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-50"
+                            >
+                              {link.label}
+                            </Link>
+                          ) : (
+                            <a
+                              href={link.href}
+                              onClick={() => setIsMenuOpen(false)}
+                              className="block rounded-md px-3 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-50"
+                            >
+                              {link.label}
+                            </a>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                   {isLoggedIn ? (
                     <>
                       {/* User Info Section */}

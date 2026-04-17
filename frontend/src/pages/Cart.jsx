@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { isAdmin } from '../lib/roles'
 import { useSignInModal } from '../context/SignInModalContext'
 import SmartBackButton from '../components/SmartBackButton'
+import { API_URL } from '../lib/api'
 
 function Cart() {
   const { cart, removeFromCart, updateQuantity, clearCart, getCartTotal, getCartCount } = useCart()
@@ -64,12 +65,12 @@ function Cart() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Shopping Cart ({getCartCount()} items)</h1>
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-8 sm:py-12">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Shopping Cart ({getCartCount()} items)</h1>
           <Link
             to="/products"
-            className="text-[#664C36] hover:text-[#5a4230] font-medium"
+            className="text-[#664C36] hover:text-[#5a4230] font-medium text-sm sm:text-base shrink-0"
           >
             ← Continue Shopping
           </Link>
@@ -79,11 +80,11 @@ function Cart() {
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-sm overflow-hidden">
               {cart.map((item) => (
-                <div key={item.id} className="border-b border-gray-200 p-6 flex gap-4">
-                  <div className="w-24 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                <div key={item.id} className="border-b border-gray-200 p-4 sm:p-6 flex flex-row gap-3 sm:gap-4">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gray-100 rounded-lg overflow-hidden shrink-0">
                     {item.image_path ? (
                       <img
-                        src={`http://localhost:8000${item.image_path}`}
+                        src={`${API_URL}${item.image_path}`}
                         alt={item.name}
                         className="w-full h-full object-cover"
                       />
@@ -94,44 +95,48 @@ function Cart() {
                     )}
                   </div>
 
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900">{item.name}</h3>
-                    <p className="text-sm text-gray-600 mt-1 line-clamp-2">{item.description}</p>
-                    <p className="text-lg font-bold text-[#664C36] mt-2">₱{item.price.toFixed(2)}</p>
-                  </div>
-
-                  <div className="flex flex-col items-end justify-between">
-                    <button
-                      onClick={() => removeFromCart(item.id)}
-                      className="text-red-500 hover:text-red-700 p-2"
-                      aria-label="Remove item"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-
-                    <div className="flex items-center gap-2 border border-gray-300 rounded-lg">
+                  <div className="flex-1 min-w-0 flex flex-col">
+                    <div className="flex justify-between gap-2 items-start">
+                      <div className="min-w-0">
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 leading-snug">{item.name}</h3>
+                        <p className="text-xs sm:text-sm text-gray-600 mt-0.5 line-clamp-2">{item.description}</p>
+                        <p className="text-sm sm:text-base font-bold text-[#664C36] mt-1">₱{item.price.toFixed(2)}</p>
+                      </div>
                       <button
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                        className="px-3 py-1 hover:bg-gray-100 transition-colors"
-                        aria-label="Decrease quantity"
+                        type="button"
+                        onClick={() => removeFromCart(item.id)}
+                        className="text-red-500 hover:text-red-700 p-2 shrink-0 -mr-1 min-w-10 min-h-10 flex items-center justify-center rounded-lg hover:bg-red-50"
+                        aria-label="Remove item"
                       >
-                        −
-                      </button>
-                      <span className="px-4 py-1 font-medium">{item.quantity}</span>
-                      <button
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        className="px-3 py-1 hover:bg-gray-100 transition-colors"
-                        aria-label="Increase quantity"
-                      >
-                        +
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
                       </button>
                     </div>
-
-                    <p className="text-lg font-bold text-gray-900 mt-2">
-                      ₱{(item.price * item.quantity).toFixed(2)}
-                    </p>
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-0 border border-gray-300 rounded-lg overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          className="px-3 py-2 min-w-10 hover:bg-gray-100 transition-colors text-base leading-none"
+                          aria-label="Decrease quantity"
+                        >
+                          −
+                        </button>
+                        <span className="px-3 py-2 font-medium min-w-[2.5rem] text-center border-x border-gray-300">{item.quantity}</span>
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          className="px-3 py-2 min-w-10 hover:bg-gray-100 transition-colors text-base leading-none"
+                          aria-label="Increase quantity"
+                        >
+                          +
+                        </button>
+                      </div>
+                      <p className="text-base sm:text-lg font-bold text-gray-900 tabular-nums">
+                        ₱{(item.price * item.quantity).toFixed(2)}
+                      </p>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -146,7 +151,7 @@ function Cart() {
           </div>
 
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm p-6 sticky top-4">
+            <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6 lg:sticky lg:top-4">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Order Summary</h2>
               
               <div className="space-y-3 mb-6">

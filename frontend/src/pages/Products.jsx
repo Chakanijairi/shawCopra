@@ -78,19 +78,19 @@ function Products() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <Link to="/" className="text-2xl font-semibold text-[#664C36]" style={{ fontFamily: "cursive" }}>
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-40 pt-[env(safe-area-inset-top,0px)]">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between min-w-0">
+          <Link to="/" className="text-xl sm:text-2xl font-semibold text-[#664C36] shrink-0" style={{ fontFamily: "cursive" }}>
             Shaw&apos;s Copra
           </Link>
-          <nav className="flex items-center gap-4 sm:gap-6 flex-wrap justify-end">
-            <Link to="/" className="text-gray-600 hover:text-gray-900 font-medium nav-link-underline">Home</Link>
-            <Link to="/products" className="text-gray-900 font-semibold border-b-2 border-[#664C36]">Products</Link>
-            <Link to="/cart" className="text-gray-600 hover:text-gray-900 font-medium nav-link-underline">Cart</Link>
+          <nav className="flex items-center gap-2 sm:gap-4 md:gap-6 flex-wrap justify-start sm:justify-end text-sm sm:text-base min-w-0">
+            <Link to="/" className="text-gray-600 hover:text-gray-900 font-medium nav-link-underline py-1.5">Home</Link>
+            <Link to="/products" className="text-gray-900 font-semibold border-b-2 border-[#664C36] py-1.5">Products</Link>
+            <Link to="/cart" className="text-gray-600 hover:text-gray-900 font-medium nav-link-underline py-1.5">Cart</Link>
             <button
               type="button"
               onClick={openSignIn}
-              className="text-sm font-medium text-[#664C36] hover:text-[#5a4230] px-2 py-1 rounded-lg hover:bg-[#664C36]/10"
+              className="text-sm font-medium text-[#664C36] hover:text-[#5a4230] px-2 py-2 rounded-lg hover:bg-[#664C36]/10 min-h-9"
             >
               Sign in
             </button>
@@ -104,9 +104,9 @@ function Products() {
           <div className="absolute top-6 right-16 w-24 h-24 rounded-full bg-white/5 animate-float-slow" />
           <div className="absolute bottom-4 left-20 w-16 h-16 rounded-full bg-white/5 animate-float-reverse" />
         </div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
-          <h1 className="text-4xl font-bold text-white mb-2">Our Products</h1>
-          <p className="text-white/80 text-lg">Quality coconut products from Zamboanga del Sur</p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10">
+          <h1 className="text-2xl sm:text-4xl font-bold text-white mb-2">Our Products</h1>
+          <p className="text-white/80 text-base sm:text-lg">Quality coconut products from Zamboanga del Sur</p>
 
           {adminUser && (
             <p className="mt-4 text-sm text-amber-100 bg-black/20 rounded-lg px-4 py-2 inline-block max-w-xl">

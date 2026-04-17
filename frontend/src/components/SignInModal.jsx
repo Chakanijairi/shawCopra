@@ -18,14 +18,14 @@ export default function SignInModal({ isOpen, onClose }) {
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="sign-in-modal-title">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4 pt-[max(1rem,env(safe-area-inset-top,0px))] pb-[max(1rem,env(safe-area-inset-bottom,0px))]" role="dialog" aria-modal="true" aria-labelledby="sign-in-modal-title">
       <button
         type="button"
         className="absolute inset-0 bg-black/45 backdrop-blur-[1px]"
         aria-label="Close sign in"
         onClick={onClose}
       />
-      <div className="relative w-full max-w-sm rounded-2xl bg-white shadow-xl border border-gray-100 p-6 sm:p-8">
+      <div className="relative w-full max-w-sm max-h-[90dvh] overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-xl border border-gray-100 p-6 sm:p-8">
         <button
           type="button"
           onClick={onClose}
