@@ -24,6 +24,14 @@ function setupPassport(app) {
   const callbackURL = process.env.CALLBACK_URL?.trim();
 
   if (!clientID || !clientSecret || !callbackURL) {
+    const missing = [
+      !clientID && 'GOOGLE_CLIENT_ID',
+      !clientSecret && 'GOOGLE_CLIENT_SECRET',
+      !callbackURL && 'CALLBACK_URL',
+    ].filter(Boolean);
+    console.warn(
+      `⚠ Google OAuth (GET /auth/google/oauth) is disabled — missing: ${missing.join(', ')}. Set these on Render and redeploy.`
+    );
     return;
   }
 

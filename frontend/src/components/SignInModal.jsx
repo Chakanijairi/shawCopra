@@ -1,7 +1,6 @@
 import { useEffect } from "react"
 import SmartBackButton from "./SmartBackButton"
 import { API_URL } from "../lib/api"
-import GmailOpenLink from "./GmailOpenLink"
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 const PASSPORT_GOOGLE_URL = `${API_URL}/auth/google/oauth`
@@ -69,7 +68,14 @@ export default function SignInModal({ isOpen, onClose }) {
               Continue with Google
             </a>
           ) : (
-            <GmailOpenLink />
+            <p className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-lg px-3 py-3 leading-relaxed">
+              Google sign-in is not wired for this deployment. In{" "}
+              <strong className="font-medium">Vercel → Settings → Environment Variables</strong>, add{" "}
+              <code className="font-mono text-xs bg-white/80 px-1 rounded">VITE_GOOGLE_CLIENT_ID</code> with the same Web
+              Client ID as <code className="font-mono text-xs bg-white/80 px-1 rounded">GOOGLE_CLIENT_ID</code> on Render,
+              then redeploy. Without it, the app cannot open the &quot;Choose an account&quot; screen for your app
+              (CopraSystem).
+            </p>
           )}
         </div>
 
