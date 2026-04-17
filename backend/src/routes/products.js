@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const { pool } = require('../config/database');
 const { authMiddleware, adminMiddleware, optionalAuth } = require('../middleware/auth');
+const supabaseStorage = require('../lib/supabaseStorage');
 
 const router = express.Router();
 
@@ -12,29 +13,73 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-const storage = multer.diskStorage({
+const fileFilter = (req, file, cb) => {
+  const allowedTypes = /jpeg|jpg|png|gif|webp/;
+  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+  const mimetype = allowedTypes.test(file.mimetype);
+  if (mimetype && extname) {
+    return cb(null, true);
+  }
+  cb(new Error('Only image files are allowed'));
+};
+
+const multerLimits = { fileSize: 5 * 1024 * 1024 };
+
+const diskStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
+  },
 });
 
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    if (mimetype && extname) {
-      return cb(null, true);
-    }
-    cb(new Error('Only image files are allowed'));
-  }
+const uploadDisk = multer({
+  storage: diskStorage,
+  limits: multerLimits,
+  fileFilter,
 });
+
+const uploadMemory = multer({
+  storage: multer.memoryStorage(),
+  limits: multerLimits,
+  fileFilter,
+});
+
+/** Multer middleware: memory when Supabase is configured (Render), disk otherwise (local). */
+function uploadProductImage(req, res, next) {
+  const mw = supabaseStorage.isConfigured() ? uploadMemory : uploadDisk;
+  return mw.single('image')(req, res, next);
+}
+
+function imagePathForClient(stored) {
+  if (!stored) return null;
+  const s = String(stored).trim();
+  if (/^https?:\/\//i.test(s)) return s;
+  return `/uploads/${path.basename(s)}`;
+}
+
+function removeLocalFile(stored) {
+  if (!stored || /^https?:\/\//i.test(String(stored).trim())) return;
+  const fp = path.join(uploadDir, path.basename(stored));
+  if (fs.existsSync(fp)) {
+    fs.unlinkSync(fp);
+  }
+}
+
+async function persistUploadedFile(req) {
+  if (!req.file) return null;
+  if (supabaseStorage.isConfigured()) {
+    return supabaseStorage.uploadProductImage(req.file);
+  }
+  return req.file.filename;
+}
+
+async function deleteStoredImageEverywhere(stored) {
+  await supabaseStorage.removeStoredImage(stored);
+  removeLocalFile(stored);
+}
 
 router.get('', optionalAuth, async (req, res) => {
   try {
@@ -44,9 +89,9 @@ router.get('', optionalAuth, async (req, res) => {
       ? 'SELECT * FROM products ORDER BY id DESC'
       : 'SELECT * FROM products WHERE COALESCE(stock, 0) > 0 ORDER BY id DESC';
     const result = await pool.query(sql);
-    const products = result.rows.map(product => ({
+    const products = result.rows.map((product) => ({
       ...product,
-      image_path: product.image_path ? `/uploads/${path.basename(product.image_path)}` : null
+      image_path: imagePathForClient(product.image_path),
     }));
     res.json(products);
   } catch (error) {
@@ -144,7 +189,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
     if (!admin && stock <= 0) {
       return res.status(404).json({ detail: 'Product not found' });
     }
-    product.image_path = product.image_path ? `/uploads/${path.basename(product.image_path)}` : null;
+    product.image_path = imagePathForClient(product.image_path);
     res.json(product);
   } catch (error) {
     console.error('Get product error:', error);
@@ -152,7 +197,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
   }
 });
 
-router.post('', authMiddleware, adminMiddleware, upload.single('image'), async (req, res) => {
+router.post('', authMiddleware, adminMiddleware, uploadProductImage, async (req, res) => {
   try {
     const { name, description, price, stock } = req.body;
 
@@ -160,7 +205,14 @@ router.post('', authMiddleware, adminMiddleware, upload.single('image'), async (
       return res.status(400).json({ detail: 'Name and price are required' });
     }
 
-    const imagePath = req.file ? req.file.filename : null;
+    let imagePath = null;
+    try {
+      imagePath = await persistUploadedFile(req);
+    } catch (e) {
+      console.error('Product image upload error:', e);
+      return res.status(500).json({ detail: e.message || 'Failed to upload image' });
+    }
+
     const stockNum = Math.max(0, Math.floor(Number.parseInt(String(stock ?? '0'), 10) || 0));
 
     const result = await pool.query(
@@ -169,7 +221,7 @@ router.post('', authMiddleware, adminMiddleware, upload.single('image'), async (
     );
 
     const product = result.rows[0];
-    product.image_path = product.image_path ? `/uploads/${path.basename(product.image_path)}` : null;
+    product.image_path = imagePathForClient(product.image_path);
 
     res.status(201).json(product);
   } catch (error) {
@@ -178,7 +230,7 @@ router.post('', authMiddleware, adminMiddleware, upload.single('image'), async (
   }
 });
 
-router.put('/:id', authMiddleware, adminMiddleware, upload.single('image'), async (req, res) => {
+router.put('/:id', authMiddleware, adminMiddleware, uploadProductImage, async (req, res) => {
   try {
     const { name, description, price, stock } = req.body;
     const productId = req.params.id;
@@ -192,13 +244,14 @@ router.put('/:id', authMiddleware, adminMiddleware, upload.single('image'), asyn
     let imagePath = existingProduct.rows[0].image_path;
 
     if (req.file) {
-      if (imagePath) {
-        const oldImagePath = path.join(uploadDir, path.basename(imagePath));
-        if (fs.existsSync(oldImagePath)) {
-          fs.unlinkSync(oldImagePath);
-        }
+      try {
+        const newPath = await persistUploadedFile(req);
+        await deleteStoredImageEverywhere(imagePath);
+        imagePath = newPath;
+      } catch (e) {
+        console.error('Product image upload error:', e);
+        return res.status(500).json({ detail: e.message || 'Failed to upload image' });
       }
-      imagePath = req.file.filename;
     }
 
     const result = await pool.query(
@@ -207,7 +260,7 @@ router.put('/:id', authMiddleware, adminMiddleware, upload.single('image'), asyn
     );
 
     const product = result.rows[0];
-    product.image_path = product.image_path ? `/uploads/${path.basename(product.image_path)}` : null;
+    product.image_path = imagePathForClient(product.image_path);
 
     res.json(product);
   } catch (error) {
@@ -226,12 +279,7 @@ router.delete('/:id', authMiddleware, adminMiddleware, async (req, res) => {
     }
 
     const imagePath = existingProduct.rows[0].image_path;
-    if (imagePath) {
-      const imageFilePath = path.join(uploadDir, path.basename(imagePath));
-      if (fs.existsSync(imageFilePath)) {
-        fs.unlinkSync(imageFilePath);
-      }
-    }
+    await deleteStoredImageEverywhere(imagePath);
 
     await pool.query('DELETE FROM products WHERE id = $1', [productId]);
 
