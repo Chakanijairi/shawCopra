@@ -257,10 +257,16 @@ export async function sendOrderCustomerEmail({ email, customerName, orderId, tem
   return res.json()
 }
 
-/** Fire-and-forget: emails admin when a customer completes checkout (does not block UX). */
+/**
+ * Emails the shop admin (Gmail) when a customer completes checkout.
+ * Requires `GMAIL_USER` + `GMAIL_APP_PASSWORD` on the API server.
+ * @returns {{ ok: true } | { ok: false, detail?: string, code?: string }}
+ */
 export async function notifyAdminNewOrder({ order, totalOrdersInStore }) {
   const token = localStorage.getItem("token")
-  if (!token) return
+  if (!token) {
+    return { ok: false, detail: "Not signed in", code: "NO_TOKEN" }
+  }
   try {
     const res = await fetchWithTimeout(`${API_URL}/users/notify-admin/new-order`, {
       method: "POST",
@@ -272,14 +278,23 @@ export async function notifyAdminNewOrder({ order, totalOrdersInStore }) {
     })
     if (res.status === 401) {
       clearStoredAuth()
-      return
+      return { ok: false, detail: "Session expired", code: "401" }
     }
     const data = await res.json().catch(() => ({}))
     if (!res.ok) {
-      console.warn("[notify admin new order]", messageFromApiBody(data) || "failed")
+      const detail = messageFromApiBody(data) || "Could not email the shop"
+      console.warn("[notify admin new order]", detail)
+      return {
+        ok: false,
+        detail,
+        code: data.code || (res.status === 503 ? "MAIL_NOT_CONFIGURED" : undefined),
+      }
     }
+    return { ok: true }
   } catch (err) {
-    console.warn("[notify admin new order]", err?.message || err)
+    const msg = err?.message || String(err)
+    console.warn("[notify admin new order]", msg)
+    return { ok: false, detail: msg, code: "NETWORK" }
   }
 }
 

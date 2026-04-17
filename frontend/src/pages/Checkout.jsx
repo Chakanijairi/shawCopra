@@ -78,6 +78,8 @@ function Checkout() {
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [currentOrderId, setCurrentOrderId] = useState(null)
   const [orderPlaced, setOrderPlaced] = useState(false)
+  /** Set when the shop could not be emailed (missing Gmail on server, SMTP error, etc.) */
+  const [adminEmailNotifyIssue, setAdminEmailNotifyIssue] = useState(null)
   const [gcashUnavailableMessage, setGcashUnavailableMessage] = useState('')
   const gcashAttemptRef = useRef(0)
 
@@ -216,7 +218,8 @@ function Checkout() {
         const lineTotal = priceNumber(i.price) * qty
         return `${i.name || 'Item'} ×${qty} — ₱${lineTotal.toFixed(2)}`
       })
-      void notifyAdminNewOrder({
+      setAdminEmailNotifyIssue(null)
+      const notifyResult = await notifyAdminNewOrder({
         order: {
           id: newOrder.id,
           total: newOrder.total,
@@ -226,6 +229,12 @@ function Checkout() {
         },
         totalOrdersInStore: existingOrders.length,
       })
+      if (!notifyResult.ok) {
+        setAdminEmailNotifyIssue(
+          notifyResult.detail ||
+            "The store could not be notified by email. Your order is still saved."
+        )
+      }
 
       setOrderPlaced(true)
       setCurrentOrderId(newOrder.id)
@@ -267,6 +276,7 @@ function Checkout() {
         isOpen={showSuccessModal} 
         onClose={closeSuccessModal}
         orderId={currentOrderId}
+        adminEmailNotifyIssue={adminEmailNotifyIssue}
       />
 
       <div className="min-h-screen bg-gray-50">
