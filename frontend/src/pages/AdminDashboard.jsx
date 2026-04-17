@@ -6,6 +6,7 @@ import {
   updateProduct,
   deleteProduct,
   getOrderNotificationTemplates,
+  getEmailConfig,
   sendOrderCustomerEmail,
   emailAdminOrdersSummary,
   API_URL,
@@ -38,11 +39,16 @@ function AdminDashboard() {
   const [notifyTemplateByOrder, setNotifyTemplateByOrder] = useState({})
   const [sendingOrderId, setSendingOrderId] = useState(null)
   const [emailingDigest, setEmailingDigest] = useState(false)
+  /** null = not loaded; false = API says Gmail env missing */
+  const [gmailConfigured, setGmailConfigured] = useState(null)
 
   const ordersPerPage = 5
 
   useEffect(() => {
     if (activeTab !== "orders") return
+    getEmailConfig()
+      .then((d) => setGmailConfigured(!!d.gmailConfigured))
+      .catch(() => setGmailConfigured(null))
     getOrderNotificationTemplates()
       .then((data) => setOrderEmailTemplates(data.templates || []))
       .catch(() =>
@@ -398,6 +404,19 @@ function AdminDashboard() {
 
         {activeTab === "orders" && (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm max-w-full">
+            {gmailConfigured === false && (
+              <div
+                className="px-4 sm:px-6 py-3 border-b border-red-200 bg-red-50 text-sm text-red-900"
+                role="alert"
+              >
+                <strong className="font-semibold">Gmail is not configured on the API server.</strong> New-order
+                alerts and “Send email” to customers will fail until you set{" "}
+                <code className="text-xs bg-white px-1 rounded border border-red-200">GMAIL_USER</code> and{" "}
+                <code className="text-xs bg-white px-1 rounded border border-red-200">GMAIL_APP_PASSWORD</code> in{" "}
+                <code className="text-xs bg-white px-1 rounded border border-red-200">backend/.env</code> (local) or
+                Render → Environment (production), then restart the API.
+              </div>
+            )}
             <div className="px-4 sm:px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-lg font-semibold text-gray-900">Orders Management</h2>
               <div className="flex flex-wrap items-center gap-2">

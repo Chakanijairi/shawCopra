@@ -228,6 +228,19 @@ export async function updateShippingInfo(shippingData) {
   return res.json()
 }
 
+/** Admin: whether the API has Gmail SMTP configured (no secrets returned). */
+export async function getEmailConfig() {
+  const token = localStorage.getItem("token")
+  const res = await fetch(`${API_URL}/users/email-config`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.detail || "Failed to load email config")
+  }
+  return res.json()
+}
+
 export async function getOrderNotificationTemplates() {
   const token = localStorage.getItem("token")
   const res = await fetch(`${API_URL}/users/order-email-templates`, {
