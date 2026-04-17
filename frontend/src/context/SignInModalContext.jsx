@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from "react"
 
 export default function SignInModal({ isOpen, onClose }) {
   const googleBtnRef = useRef(null)
+  const googleInitialized = useRef(false)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (!isOpen) return
     if (!window.google) return
+    if (googleInitialized.current) return // 🔥 IMPORTANT FIX
 
     window.google.accounts.id.initialize({
       client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
@@ -15,16 +17,18 @@ export default function SignInModal({ isOpen, onClose }) {
         try {
           setLoading(true)
 
-          // send ID token to your backend
-          const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/google`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              credential: response.credential,
-            }),
-          })
+          const res = await fetch(
+            `${import.meta.env.VITE_API_URL}/auth/google`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                credential: response.credential,
+              }),
+            }
+          )
 
           const data = await res.json()
 
@@ -32,25 +36,22 @@ export default function SignInModal({ isOpen, onClose }) {
             throw new Error(data.detail || "Login failed")
           }
 
-          // store JWT
           localStorage.setItem("token", data.access_token)
 
-          // optional redirect
           window.location.href = "/dashboard"
         } catch (err) {
-          console.error("Google login error:", err)
+          console.error(err)
           alert(err.message)
         } finally {
           setLoading(false)
         }
       },
 
-      // 🔥 IMPORTANT FIXES
       auto_select: false,
       cancel_on_tap_outside: true,
     })
 
-    // 🔥 FORCE RENDER BUTTON (this prevents silent login behavior)
+    // 🔥 Render button ONCE
     window.google.accounts.id.renderButton(googleBtnRef.current, {
       theme: "outline",
       size: "large",
@@ -59,9 +60,7 @@ export default function SignInModal({ isOpen, onClose }) {
       text: "continue_with",
     })
 
-    // 🔥 THIS TRIGGERS ACCOUNT CHOOSER BEHAVIOR
-    window.google.accounts.id.prompt()
-
+    googleInitialized.current = true
   }, [isOpen])
 
   if (!isOpen) return null
@@ -69,11 +68,7 @@ export default function SignInModal({ isOpen, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
       <div className="bg-white p-6 rounded-xl w-[400px] relative">
-
-        <button
-          onClick={onClose}
-          className="absolute top-2 right-3 text-gray-500"
-        >
+        <button onClick={onClose} className="absolute top-2 right-3">
           ✕
         </button>
 
@@ -92,6 +87,108 @@ export default function SignInModal({ isOpen, onClose }) {
     </div>
   )
 }
+
+
+
+
+
+
+
+
+// import { useEffect, useRef, useState } from "react"
+
+// export default function SignInModal({ isOpen, onClose }) {
+//   const googleBtnRef = useRef(null)
+//   const [loading, setLoading] = useState(false)
+
+//   useEffect(() => {
+//     if (!isOpen) return
+//     if (!window.google) return
+
+//     window.google.accounts.id.initialize({
+//       client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+
+//       callback: async (response) => {
+//         try {
+//           setLoading(true)
+
+//           // send ID token to your backend
+//           const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/google`, {
+//             method: "POST",
+//             headers: {
+//               "Content-Type": "application/json",
+//             },
+//             body: JSON.stringify({
+//               credential: response.credential,
+//             }),
+//           })
+
+//           const data = await res.json()
+
+//           if (!res.ok) {
+//             throw new Error(data.detail || "Login failed")
+//           }
+
+//           // store JWT
+//           localStorage.setItem("token", data.access_token)
+
+//           // optional redirect
+//           window.location.href = "/dashboard"
+//         } catch (err) {
+//           console.error("Google login error:", err)
+//           alert(err.message)
+//         } finally {
+//           setLoading(false)
+//         }
+//       },
+
+//       // 🔥 IMPORTANT FIXES
+//       auto_select: false,
+//       cancel_on_tap_outside: true,
+//     })
+
+//     // 🔥 FORCE RENDER BUTTON (this prevents silent login behavior)
+//     window.google.accounts.id.renderButton(googleBtnRef.current, {
+//       theme: "outline",
+//       size: "large",
+//       type: "standard",
+//       shape: "pill",
+//       text: "continue_with",
+//     })
+
+//     // 🔥 THIS TRIGGERS ACCOUNT CHOOSER BEHAVIOR
+//     window.google.accounts.id.prompt()
+
+//   }, [isOpen])
+
+//   if (!isOpen) return null
+
+//   return (
+//     <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+//       <div className="bg-white p-6 rounded-xl w-[400px] relative">
+
+//         <button
+//           onClick={onClose}
+//           className="absolute top-2 right-3 text-gray-500"
+//         >
+//           ✕
+//         </button>
+
+//         <h2 className="text-xl font-semibold mb-4">
+//           Sign in to continue
+//         </h2>
+
+//         <div ref={googleBtnRef} />
+
+//         {loading && (
+//           <p className="text-sm text-gray-500 mt-3">
+//             Signing you in...
+//           </p>
+//         )}
+//       </div>
+//     </div>
+//   )
+// }
 
 
 
