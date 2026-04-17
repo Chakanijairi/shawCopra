@@ -2,6 +2,27 @@ export const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000")
   .replace(/\/$/, "")
 const FETCH_TIMEOUT = 30000
 
+/**
+ * Resolves product image for <img src>. Absolute URLs (Supabase) are unchanged.
+ * Paths like /uploads/... or bare filenames need the API origin — otherwise the browser
+ * requests the Vite dev server and returns 404.
+ */
+export function productImageUrl(imagePath) {
+  if (imagePath == null || imagePath === "") return null
+  const s = String(imagePath).trim()
+  if (/^https?:\/\//i.test(s)) return s
+  let rel = s
+  if (rel.startsWith("/uploads/")) {
+    /* ok */
+  } else if (rel.startsWith("uploads/")) {
+    rel = `/${rel}`
+  } else {
+    const name = rel.includes("/") ? rel.split("/").pop() : rel
+    rel = `/uploads/${name || rel}`
+  }
+  return `${API_URL}${rel}`
+}
+
 /** Clears client auth when the server rejects the session (401). */
 export function clearStoredAuth() {
   try {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { Link, useParams } from "react-router-dom"
-import { getProduct } from "../lib/api"
+import { getProduct, productImageUrl } from "../lib/api"
 import { useCart } from "../context/CartContext"
 import { isAdmin } from "../lib/roles"
 import { useSignInModal } from "../context/SignInModalContext"
@@ -99,7 +99,7 @@ function ProductDetail() {
             <div className="aspect-square md:aspect-[4/3] bg-gray-100 max-h-[420px]">
               {product.image_path ? (
                 <img
-                  src={product.image_path}
+                  src={productImageUrl(product.image_path)}
                   alt={product.name}
                   className="w-full h-full object-cover"
                 />
