@@ -263,8 +263,8 @@ function AdminDashboard() {
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 ml-64 p-8">
+      {/* Main content — min-w-0 lets nested tables scroll horizontally inside the flex layout */}
+      <main className="flex-1 ml-64 p-4 sm:p-8 min-w-0 max-w-full">
         <header className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-gray-500 mt-1">Monitor and manage your store</p>
@@ -397,8 +397,8 @@ function AdminDashboard() {
         )}
 
         {activeTab === "orders" && (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm max-w-full">
+            <div className="px-4 sm:px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-lg font-semibold text-gray-900">Orders Management</h2>
               <div className="flex flex-wrap items-center gap-2">
                 <button
@@ -422,20 +422,20 @@ function AdminDashboard() {
               </div>
             ) : (
               <>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left">
+                <div className="overflow-x-auto overscroll-x-contain max-w-full touch-pan-x [-webkit-overflow-scrolling:touch]">
+                  <table className="w-full min-w-[1100px] text-left">
                     <thead>
                       <tr className="bg-gray-50 text-gray-600 text-sm">
-                        <th className="px-6 py-3 font-medium">Order ID</th>
-                        <th className="px-6 py-3 font-medium">Customer</th>
-                        <th className="px-6 py-3 font-medium">Email</th>
-                        <th className="px-6 py-3 font-medium">Items</th>
-                        <th className="px-6 py-3 font-medium">Total</th>
-                        <th className="px-6 py-3 font-medium">Payment</th>
-                        <th className="px-6 py-3 font-medium">Status</th>
-                        <th className="px-6 py-3 font-medium">Date</th>
-                        <th className="px-6 py-3 font-medium min-w-[220px]">Email customer</th>
-                        <th className="px-6 py-3 font-medium">Actions</th>
+                        <th className="px-4 sm:px-6 py-3 font-medium whitespace-nowrap">Order ID</th>
+                        <th className="px-4 sm:px-6 py-3 font-medium whitespace-nowrap">Customer</th>
+                        <th className="px-4 sm:px-6 py-3 font-medium whitespace-nowrap">Email</th>
+                        <th className="px-4 sm:px-6 py-3 font-medium whitespace-nowrap">Items</th>
+                        <th className="px-4 sm:px-6 py-3 font-medium whitespace-nowrap">Total</th>
+                        <th className="px-4 sm:px-6 py-3 font-medium whitespace-nowrap">Payment</th>
+                        <th className="px-4 sm:px-6 py-3 font-medium whitespace-nowrap">Status</th>
+                        <th className="px-4 sm:px-6 py-3 font-medium whitespace-nowrap">Date</th>
+                        <th className="px-4 sm:px-6 py-3 font-medium min-w-[220px] whitespace-nowrap">Email customer</th>
+                        <th className="px-4 sm:px-6 py-3 font-medium whitespace-nowrap">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -448,17 +448,17 @@ function AdminDashboard() {
                         }
                         return (
                           <tr key={order.id} className="border-t border-gray-100 hover:bg-gray-50/50">
-                            <td className="px-6 py-4 font-mono font-medium text-gray-900 text-sm">#{order.id}</td>
-                            <td className="px-6 py-4 text-gray-900">{order.shippingInfo?.fullName || 'N/A'}</td>
-                            <td className="px-6 py-4 text-gray-600 text-sm">{order.shippingInfo?.email || 'N/A'}</td>
-                            <td className="px-6 py-4 text-gray-600">{order.items?.length || 0}</td>
-                            <td className="px-6 py-4 font-semibold text-gray-900">₱{order.total?.toFixed(2)}</td>
-                            <td className="px-6 py-4">
+                            <td className="px-4 sm:px-6 py-4 font-mono font-medium text-gray-900 text-sm whitespace-nowrap">#{order.id}</td>
+                            <td className="px-4 sm:px-6 py-4 text-gray-900 whitespace-nowrap max-w-[160px] truncate" title={order.shippingInfo?.fullName}>{order.shippingInfo?.fullName || 'N/A'}</td>
+                            <td className="px-4 sm:px-6 py-4 text-gray-600 text-sm whitespace-nowrap max-w-[200px] truncate" title={order.shippingInfo?.email}>{order.shippingInfo?.email || 'N/A'}</td>
+                            <td className="px-4 sm:px-6 py-4 text-gray-600 whitespace-nowrap">{order.items?.length || 0}</td>
+                            <td className="px-4 sm:px-6 py-4 font-semibold text-gray-900 whitespace-nowrap">₱{Number(order.total ?? 0).toFixed(2)}</td>
+                            <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                               <span className="inline-flex px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700">
                                 {order.paymentMethod === 'cod' ? 'COD' : 'GCash'}
                               </span>
                             </td>
-                            <td className="px-6 py-4">
+                            <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                               <select
                                 value={order.status}
                                 onChange={(e) => updateOrderStatus(order.id, e.target.value)}
@@ -469,8 +469,8 @@ function AdminDashboard() {
                                 <option value="cancelled">Cancelled</option>
                               </select>
                             </td>
-                            <td className="px-6 py-4 text-gray-500 text-sm">{orderDate}</td>
-                            <td className="px-6 py-4 align-top">
+                            <td className="px-4 sm:px-6 py-4 text-gray-500 text-sm whitespace-nowrap">{orderDate}</td>
+                            <td className="px-4 sm:px-6 py-4 align-top">
                               <div className="flex flex-col gap-2 min-w-[200px]">
                                 <select
                                   value={notifyTemplateByOrder[order.id] || ""}
@@ -505,7 +505,7 @@ function AdminDashboard() {
                                 )}
                               </div>
                             </td>
-                            <td className="px-6 py-4">
+                            <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                               <button
                                 onClick={() => {
                                   const orderDetails = `
@@ -532,11 +532,11 @@ Notes: ${order.shippingInfo?.notes || 'None'}
                     </tbody>
                   </table>
                 </div>
-                <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-between">
+                <div className="px-4 sm:px-6 py-3 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <p className="text-sm text-gray-500">
                     Showing {((ordersPage - 1) * ordersPerPage) + 1} to {Math.min(ordersPage * ordersPerPage, orders.length)} of {orders.length} orders
                   </p>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 shrink-0">
                     <button 
                       type="button" 
                       onClick={() => setOrdersPage((p) => Math.max(1, p - 1))} 
