@@ -6,6 +6,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const { initDatabase, pool, seedDefaultAdmin } = require('./src/config/database');
+const { isGmailConfigured } = require('./src/lib/mailer');
 const authRoutes = require('./src/routes/auth');
 const { setupPassport } = require('./src/config/passportApp');
 const productRoutes = require('./src/routes/products');
@@ -108,12 +109,12 @@ const startServer = async () => {
     app.listen(PORT, () => {
       console.log(`\n🚀 Server running on http://localhost:${PORT}`);
       console.log(`📊 Health check: http://localhost:${PORT}/health`);
-      const gu = process.env.GMAIL_USER?.trim();
-      const gap = process.env.GMAIL_APP_PASSWORD?.replace(/\s/g, '').trim();
-      if (!gu || !gap) {
+      if (!isGmailConfigured()) {
         console.warn(
-          'ℹ️  GMAIL_USER / GMAIL_APP_PASSWORD not set — order notification emails are disabled until you add them to backend/.env and restart.'
+          'ℹ️  Gmail SMTP not fully configured (GMAIL_USER + 16-char GMAIL_APP_PASSWORD). Order/customer emails are disabled until set in backend/.env (or Render env) and the server restarts.'
         );
+      } else {
+        console.log('✓ Gmail SMTP env looks configured (GMAIL_USER + app password).');
       }
     });
   } catch (error) {

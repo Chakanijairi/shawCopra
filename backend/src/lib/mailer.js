@@ -1,14 +1,41 @@
 const nodemailer = require('nodemailer');
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function normalizeGmailUser(raw) {
+  if (raw == null || raw === '') return '';
+  return String(raw).replace(/^\uFEFF/, '').trim();
+}
+
+function normalizeAppPassword(raw) {
+  if (raw == null) return '';
+  return String(raw).replace(/^\uFEFF/, '').replace(/\s/g, '').trim();
+}
+
+/** True when env has both Gmail user and a non-empty app password (16 chars after removing spaces). */
+function isGmailConfigured() {
+  const user = normalizeGmailUser(process.env.GMAIL_USER);
+  const pass = normalizeAppPassword(process.env.GMAIL_APP_PASSWORD);
+  return !!(user && EMAIL_RE.test(user) && pass.length >= 16);
+}
+
 /**
  * Sends mail via Gmail SMTP.
  * Requires GMAIL_USER (full Gmail address) and GMAIL_APP_PASSWORD (16-char App Password from Google Account).
- * @throws {Error} code MAIL_NOT_CONFIGURED | SMTP_ERROR
+ * @throws {Error} code MAIL_NOT_CONFIGURED | SMTP_ERROR | INVALID_RECIPIENT
  */
 async function sendMail({ to, subject, text, html }) {
-  const user = process.env.GMAIL_USER?.trim();
-  const passRaw = process.env.GMAIL_APP_PASSWORD;
-  const pass = passRaw != null ? String(passRaw).replace(/\s/g, '').trim() : '';
+  const user = normalizeGmailUser(process.env.GMAIL_USER);
+  const pass = normalizeAppPassword(process.env.GMAIL_APP_PASSWORD);
+
+  const toAddr = normalizeGmailUser(to);
+  if (!toAddr || !EMAIL_RE.test(toAddr)) {
+    const err = new Error(
+      'Invalid recipient email. Ensure the customer order includes a valid email address.'
+    );
+    err.code = 'INVALID_RECIPIENT';
+    throw err;
+  }
 
   if (!user || !pass) {
     const err = new Error(
@@ -28,7 +55,7 @@ async function sendMail({ to, subject, text, html }) {
   try {
     await transporter.sendMail({
       from: `"Shaw's Copra" <${user}>`,
-      to,
+      to: toAddr,
       replyTo: user,
       subject,
       text: text || '',
@@ -231,6 +258,7 @@ async function sendAdminOrdersDigestEmail({ orders, pendingCount }) {
 
 module.exports = {
   sendMail,
+  isGmailConfigured,
   getOrderUpdateTemplateList,
   sendOrderUpdateEmail,
   sendAdminNewOrderAlert,

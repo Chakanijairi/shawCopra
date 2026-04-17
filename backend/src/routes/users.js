@@ -6,6 +6,7 @@ const {
   sendOrderUpdateEmail,
   sendAdminNewOrderAlert,
   sendAdminOrdersDigestEmail,
+  isGmailConfigured,
 } = require('../lib/mailer');
 
 const ORDER_NOTIFY_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -56,6 +57,13 @@ router.get('/order-email-templates', authMiddleware, adminMiddleware, (req, res)
   res.json({ templates: getOrderUpdateTemplateList() });
 });
 
+/** Admin: whether Gmail SMTP env is set (does not send mail). */
+router.get('/email-config', authMiddleware, adminMiddleware, (req, res) => {
+  res.json({
+    gmailConfigured: isGmailConfigured(),
+  });
+});
+
 router.post('/send-order-email', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const { email, customerName, orderId, templateId } = req.body;
@@ -94,6 +102,12 @@ router.post('/send-order-email', authMiddleware, adminMiddleware, async (req, re
       return res.status(502).json({
         detail: e.message,
         code: 'SMTP_ERROR',
+      });
+    }
+    if (e.code === 'INVALID_RECIPIENT') {
+      return res.status(400).json({
+        detail: e.message,
+        code: 'INVALID_RECIPIENT',
       });
     }
     res.status(500).json({
@@ -144,6 +158,12 @@ router.post('/notify-admin/new-order', authMiddleware, async (req, res) => {
         code: 'SMTP_ERROR',
       });
     }
+    if (e.code === 'INVALID_RECIPIENT') {
+      return res.status(500).json({
+        detail: e.message,
+        code: 'INVALID_RECIPIENT',
+      });
+    }
     res.status(500).json({
       detail: e.message || 'Failed to notify admin',
     });
@@ -171,6 +191,12 @@ router.post('/admin/email-orders-summary', authMiddleware, adminMiddleware, asyn
       return res.status(502).json({
         detail: e.message,
         code: 'SMTP_ERROR',
+      });
+    }
+    if (e.code === 'INVALID_RECIPIENT') {
+      return res.status(500).json({
+        detail: e.message,
+        code: 'INVALID_RECIPIENT',
       });
     }
     res.status(500).json({
