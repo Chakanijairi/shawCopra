@@ -55,6 +55,83 @@ router.get('', optionalAuth, async (req, res) => {
   }
 });
 
+/**
+ * Atomically reduce `products.stock` for each cart line (checkout).
+ * Customer JWT only; admins cannot use this path.
+ * Must be registered before GET /:id so "purchase-stock" is not parsed as an id.
+ */
+router.post('/purchase-stock', authMiddleware, async (req, res) => {
+  if (req.user.role === 'admin') {
+    return res.status(403).json({ detail: 'Administrators cannot deduct stock via checkout.' });
+  }
+
+  const raw = req.body?.items;
+  if (!Array.isArray(raw) || raw.length === 0) {
+    return res.status(400).json({ detail: 'items array is required' });
+  }
+
+  const lines = [];
+  for (const row of raw) {
+    const id = Number.parseInt(String(row?.id ?? row?.product_id ?? ''), 10);
+    const quantity = Math.floor(Number(row?.quantity ?? 0));
+    if (!Number.isFinite(id) || id < 1) {
+      return res.status(400).json({ detail: 'Each item needs a valid product id' });
+    }
+    if (quantity < 1) {
+      return res.status(400).json({ detail: 'Each item needs quantity >= 1' });
+    }
+    lines.push({ id, quantity });
+  }
+
+  const merged = new Map();
+  for (const { id, quantity } of lines) {
+    merged.set(id, (merged.get(id) || 0) + quantity);
+  }
+  const sorted = [...merged.entries()].sort((a, b) => a[0] - b[0]);
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    for (const [productId, qty] of sorted) {
+      const result = await client.query(
+        `UPDATE products
+         SET stock = stock - $1
+         WHERE id = $2 AND stock >= $1
+         RETURNING id, name, stock`,
+        [qty, productId]
+      );
+      if (result.rowCount === 0) {
+        const snap = await client.query(
+          'SELECT id, name, stock FROM products WHERE id = $1',
+          [productId]
+        );
+        await client.query('ROLLBACK');
+        const row = snap.rows[0];
+        if (!row) {
+          return res.status(409).json({ detail: `Product #${productId} is no longer available.` });
+        }
+        return res.status(409).json({
+          detail: `Not enough stock for "${row.name}". Available: ${row.stock}, requested: ${qty}.`,
+        });
+      }
+    }
+
+    await client.query('COMMIT');
+    return res.json({ ok: true });
+  } catch (err) {
+    try {
+      await client.query('ROLLBACK');
+    } catch (_) {
+      /* ignore */
+    }
+    console.error('purchase-stock error:', err);
+    return res.status(500).json({ detail: 'Could not update stock' });
+  } finally {
+    client.release();
+  }
+});
+
 router.get('/:id', optionalAuth, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM products WHERE id = $1', [req.params.id]);
