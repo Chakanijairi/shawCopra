@@ -15,6 +15,11 @@ const userRoutes = require('./src/routes/users');
 const app = express();
 const PORT = process.env.PORT || 8000;
 
+// Behind Render/Heroku/etc. reverse proxies so req.secure / IPs are correct (helps sessions + OAuth).
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 const defaultOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
@@ -32,14 +37,38 @@ const extraOrigins = (process.env.CORS_ORIGINS || '')
 
 const allowedOrigins = [...new Set([...defaultOrigins, ...extraOrigins])];
 
+/** Preview & branch deploys use unique https://*.vercel.app origins (not listed in defaultOrigins). */
+function isVercelAppOrigin(origin) {
+  if (!origin || typeof origin !== 'string') return false;
+  try {
+    const u = new URL(origin);
+    if (u.protocol !== 'https:') return false;
+    const h = u.hostname.toLowerCase();
+    return h.endsWith('.vercel.app') && h.length > '.vercel.app'.length;
+  } catch {
+    return false;
+  }
+}
+
+/** Set CORS_ALLOW_VERCEL_PREVIEW=0 on Render to allow only defaultOrigins + CORS_ORIGINS (stricter). */
+const allowVercelPreviewOrigins = process.env.CORS_ALLOW_VERCEL_PREVIEW !== '0';
+
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin) {
         callback(null, true);
-      } else {
-        callback(null, false);
+        return;
       }
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      if (allowVercelPreviewOrigins && isVercelAppOrigin(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(null, false);
     },
     credentials: true,
   })
