@@ -9,9 +9,9 @@ import {
   getEmailConfig,
   sendOrderCustomerEmail,
   emailAdminOrdersSummary,
-  productImageUrl,
   clearStoredAuth,
 } from "../lib/api"
+import ProductImage from "../components/ProductImage"
 import GmailOpenLink from "../components/GmailOpenLink"
 
 const SIDEBAR_LINKS = [
@@ -383,7 +383,12 @@ function AdminDashboard() {
                       <tr key={p.id} className="border-t border-gray-100">
                         <td className="px-6 py-4">
                           {p.image_path ? (
-                            <img src={productImageUrl(p.image_path)} alt={p.name} className="w-12 h-12 object-cover rounded-lg" />
+                            <ProductImage
+                              imagePath={p.image_path}
+                              alt={p.name}
+                              className="w-12 h-12 object-cover rounded-lg"
+                              loading="lazy"
+                            />
                           ) : (
                             <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs">No img</div>
                           )}
@@ -610,7 +615,12 @@ Notes: ${order.shippingInfo?.notes || 'None'}
                       <tr key={p.id} className="border-t border-gray-100 hover:bg-gray-50/50">
                         <td className="px-6 py-4">
                           {p.image_path ? (
-                            <img src={productImageUrl(p.image_path)} alt={p.name} className="w-12 h-12 object-cover rounded-lg" />
+                            <ProductImage
+                              imagePath={p.image_path}
+                              alt={p.name}
+                              className="w-12 h-12 object-cover rounded-lg"
+                              loading="lazy"
+                            />
                           ) : (
                             <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs">No img</div>
                           )}

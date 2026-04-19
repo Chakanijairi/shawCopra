@@ -3,14 +3,52 @@ export const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000")
 const FETCH_TIMEOUT = 30000
 
 /**
- * Resolves product image for <img src>. Absolute URLs (Supabase) are unchanged.
- * Paths like /uploads/... or bare filenames need the API origin — otherwise the browser
- * requests the Vite dev server and returns 404.
+ * Production builds (e.g. Vercel) must set VITE_API_URL to the public API (https://…).
+ * If it still points at localhost, "Continue with Google" would open localhost from the live site and fail.
+ */
+export function isProductionApiUrlPointingAtLocalhost() {
+  if (!import.meta.env.PROD) return false
+  try {
+    const u = new URL(API_URL.includes("://") ? API_URL : `https://${API_URL}`)
+    const h = u.hostname.toLowerCase()
+    return h === "localhost" || h === "127.0.0.1"
+  } catch {
+    return /localhost|127\.0\.0\.1/i.test(API_URL)
+  }
+}
+
+/** Full-page Google OAuth start URL (Passport on the API host). */
+export function getGooglePassportOAuthUrl() {
+  return `${API_URL}/auth/google/oauth`
+}
+
+/**
+ * Resolves product image for <img src>.
+ * - Supabase / absolute URLs: normalized (protocol-relative → https, optional http→https on https sites).
+ * - Paths like /uploads/... or bare filenames: prefixed with API_URL so refresh doesn’t hit the SPA origin.
  */
 export function productImageUrl(imagePath) {
   if (imagePath == null || imagePath === "") return null
-  const s = String(imagePath).trim()
-  if (/^https?:\/\//i.test(s)) return s
+  let s = String(imagePath).trim()
+  // Protocol-relative URLs (e.g. //project.supabase.co/...) — must become https or img fails on refresh.
+  if (s.startsWith("//")) {
+    s = `https:${s}`
+  }
+  if (/^https?:\/\//i.test(s)) {
+    // Mixed content: https page cannot load http images (blocked after full page load / refresh).
+    try {
+      if (
+        typeof globalThis.location?.protocol === "string" &&
+        globalThis.location.protocol === "https:" &&
+        /^http:\/\//i.test(s)
+      ) {
+        return `https://${s.slice("http://".length)}`
+      }
+    } catch {
+      /* ignore */
+    }
+    return s
+  }
   let rel = s
   if (rel.startsWith("/uploads/")) {
     /* ok */

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { isAdmin } from '../lib/roles'
 import { useSignInModal } from '../context/SignInModalContext'
 import SmartBackButton from '../components/SmartBackButton'
-import { productImageUrl } from '../lib/api'
+import ProductImage from '../components/ProductImage'
 import { priceNumber } from '../lib/prices'
 
 function Cart() {
@@ -86,8 +86,8 @@ function Cart() {
                 <div key={item.id} className="border-b border-gray-200 p-4 sm:p-6 flex flex-row gap-3 sm:gap-4">
                   <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gray-100 rounded-lg overflow-hidden shrink-0">
                     {item.image_path ? (
-                      <img
-                        src={productImageUrl(item.image_path)}
+                      <ProductImage
+                        imagePath={item.image_path}
                         alt={item.name}
                         className="w-full h-full object-cover"
                       />

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { Link, useSearchParams, useLocation } from "react-router-dom"
-import { getProducts, productImageUrl } from "../lib/api"
+import { getProducts } from "../lib/api"
+import ProductImage from "../components/ProductImage"
 import { useCart } from "../context/CartContext"
 import { isAdmin } from "../lib/roles"
 import { useSignInModal } from "../context/SignInModalContext"
@@ -173,8 +174,8 @@ function Products() {
                   {/* Product Image */}
                   <div className="aspect-square bg-gray-100 overflow-hidden relative">
                     {product.image_path ? (
-                      <img
-                        src={productImageUrl(product.image_path)}
+                      <ProductImage
+                        imagePath={product.image_path}
                         alt={product.name}
                         className="w-full h-full object-cover"
                       />

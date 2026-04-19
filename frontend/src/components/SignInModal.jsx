@@ -1,9 +1,10 @@
 import { useEffect } from "react"
 import SmartBackButton from "./SmartBackButton"
-import { API_URL } from "../lib/api"
+import { getGooglePassportOAuthUrl, isProductionApiUrlPointingAtLocalhost } from "../lib/api"
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
-const PASSPORT_GOOGLE_URL = `${API_URL}/auth/google/oauth`
+const PASSPORT_GOOGLE_URL = getGooglePassportOAuthUrl()
+const apiPointsToLocalInProd = isProductionApiUrlPointingAtLocalhost()
 
 export default function SignInModal({ isOpen, onClose }) {
   useEffect(() => {
@@ -42,9 +43,22 @@ export default function SignInModal({ isOpen, onClose }) {
         </h2>
 
         <div className="flex flex-col items-stretch gap-3">
-          {GOOGLE_CLIENT_ID ? (
+          {apiPointsToLocalInProd ? (
+            <p className="text-sm text-red-900 bg-red-50 border border-red-200 rounded-lg px-3 py-3 leading-relaxed">
+              <strong className="font-medium">API URL is still localhost in this production build.</strong> In{" "}
+              <strong className="font-medium">Vercel → Settings → Environment Variables</strong>, set{" "}
+              <code className="font-mono text-xs bg-white/80 px-1 rounded">VITE_API_URL</code> to your public API (e.g.{" "}
+              <code className="font-mono text-xs bg-white/80 px-1 rounded">https://your-api.onrender.com</code>
+              ), then <strong className="font-medium">redeploy</strong>. Also set matching{" "}
+              <code className="font-mono text-xs bg-white/80 px-1 rounded">FRONTEND_URL</code> /{" "}
+              <code className="font-mono text-xs bg-white/80 px-1 rounded">CALLBACK_URL</code> on the API host.
+            </p>
+          ) : null}
+          {GOOGLE_CLIENT_ID && !apiPointsToLocalInProd ? (
             <a
               href={PASSPORT_GOOGLE_URL}
+              target="_top"
+              rel="noopener noreferrer"
               className="flex justify-center items-center gap-2 w-full py-3 px-4 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-800 hover:bg-gray-50 text-center shadow-sm"
             >
               <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" aria-hidden>
@@ -67,7 +81,7 @@ export default function SignInModal({ isOpen, onClose }) {
               </svg>
               Continue with Google
             </a>
-          ) : (
+          ) : !apiPointsToLocalInProd ? (
             <p className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-lg px-3 py-3 leading-relaxed">
               Google sign-in is not wired for this deployment. In{" "}
               <strong className="font-medium">Vercel → Settings → Environment Variables</strong>, add{" "}
@@ -76,7 +90,7 @@ export default function SignInModal({ isOpen, onClose }) {
               then redeploy. Without it, the app cannot open the &quot;Choose an account&quot; screen for your app
               (CopraSystem).
             </p>
-          )}
+          ) : null}
         </div>
 
         <p className="text-center mt-6">
