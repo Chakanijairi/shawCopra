@@ -81,7 +81,14 @@ app.use(express.urlencoded({ extended: true }));
 setupPassport(app);
 
 // Must match multer destination in src/routes/products.js (backend/uploads)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(
+  '/uploads',
+  express.static(path.join(__dirname, 'uploads'), {
+    setHeaders: (res) => {
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    },
+  })
+);
 
 app.get('/health', async (req, res) => {
   try {
