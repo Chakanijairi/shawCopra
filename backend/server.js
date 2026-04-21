@@ -11,6 +11,7 @@ const authRoutes = require('./src/routes/auth');
 const { setupPassport } = require('./src/config/passportApp');
 const productRoutes = require('./src/routes/products');
 const userRoutes = require('./src/routes/users');
+const supabaseStorage = require('./src/lib/supabaseStorage');
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -137,9 +138,18 @@ function ensureEnv() {
   }
 }
 
+function warnIfProductionWithoutStorage() {
+  if (process.env.NODE_ENV === 'production' && !supabaseStorage.isConfigured()) {
+    console.warn(
+      '⚠️  SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set — admin product image uploads will return 503 until Storage is configured.'
+    );
+  }
+}
+
 const startServer = async () => {
   try {
     ensureEnv();
+    warnIfProductionWithoutStorage();
     await initDatabase();
     await seedDefaultAdmin();
     app.listen(PORT, () => {

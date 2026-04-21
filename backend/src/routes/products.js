@@ -47,9 +47,14 @@ const uploadMemory = multer({
   fileFilter,
 });
 
-/** Multer middleware: memory when Supabase is configured (Render), disk otherwise (local). */
+/**
+ * Multer: memory buffer whenever we will upload to Supabase or when production may reject disk
+ * (avoids writing ephemeral files on Render before Supabase upload).
+ */
 function uploadProductImage(req, res, next) {
-  const mw = supabaseStorage.isConfigured() ? uploadMemory : uploadDisk;
+  const useMemory =
+    supabaseStorage.isConfigured() || supabaseStorage.mustUseSupabaseForUploads();
+  const mw = useMemory ? uploadMemory : uploadDisk;
   return mw.single('image')(req, res, next);
 }
 
@@ -72,6 +77,13 @@ async function persistUploadedFile(req) {
   if (!req.file) return null;
   if (supabaseStorage.isConfigured()) {
     return supabaseStorage.uploadProductImage(req.file);
+  }
+  if (supabaseStorage.mustUseSupabaseForUploads()) {
+    const err = new Error(
+      'Supabase Storage is required for image uploads in production. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (and ensure bucket exists).'
+    );
+    err.statusCode = 503;
+    throw err;
   }
   return req.file.filename;
 }
@@ -210,7 +222,8 @@ router.post('', authMiddleware, adminMiddleware, uploadProductImage, async (req,
       imagePath = await persistUploadedFile(req);
     } catch (e) {
       console.error('Product image upload error:', e);
-      return res.status(500).json({ detail: e.message || 'Failed to upload image' });
+      const code = e.statusCode || 500;
+      return res.status(code).json({ detail: e.message || 'Failed to upload image' });
     }
 
     const stockNum = Math.max(0, Math.floor(Number.parseInt(String(stock ?? '0'), 10) || 0));
@@ -250,7 +263,8 @@ router.put('/:id', authMiddleware, adminMiddleware, uploadProductImage, async (r
         imagePath = newPath;
       } catch (e) {
         console.error('Product image upload error:', e);
-        return res.status(500).json({ detail: e.message || 'Failed to upload image' });
+        const code = e.statusCode || 500;
+        return res.status(code).json({ detail: e.message || 'Failed to upload image' });
       }
     }
 

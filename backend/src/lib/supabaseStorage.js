@@ -12,6 +12,11 @@ function isConfigured() {
   return Boolean(url && serviceKey);
 }
 
+/** In production, new product images must use Supabase Storage (Render disk is ephemeral). */
+function mustUseSupabaseForUploads() {
+  return process.env.NODE_ENV === 'production';
+}
+
 function getClient() {
   if (!isConfigured()) return null;
   return createClient(url, serviceKey, {
@@ -79,6 +84,7 @@ async function removeStoredImage(stored) {
 
 module.exports = {
   isConfigured,
+  mustUseSupabaseForUploads,
   uploadProductImage,
   removeStoredImage,
 };
