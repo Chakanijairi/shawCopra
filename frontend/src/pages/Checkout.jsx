@@ -81,7 +81,12 @@ function Checkout() {
   /** Set when the shop could not be emailed (missing Gmail on server, SMTP error, etc.) */
   const [adminEmailNotifyIssue, setAdminEmailNotifyIssue] = useState(null)
   const [gcashUnavailableMessage, setGcashUnavailableMessage] = useState('')
+  const [gcashProofFile, setGcashProofFile] = useState(null)
+  const [gcashProofDataUrl, setGcashProofDataUrl] = useState('')
   const gcashAttemptRef = useRef(0)
+
+  const GCASH_COMPANY_NUMBER = '09538993345'
+  const GCASH_COMPANY_NAME = 'Chawkani Jairi'
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -144,12 +149,44 @@ function Checkout() {
     })
   }
 
+  const handleGcashProofChange = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) {
+      setGcashProofFile(null)
+      setGcashProofDataUrl('')
+      return
+    }
+    if (!file.type.startsWith('image/')) {
+      alert('Please choose an image file (JPG, PNG, etc.).')
+      e.target.value = ''
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image must be 5MB or smaller.')
+      e.target.value = ''
+      return
+    }
+    setGcashProofFile(file)
+    const reader = new FileReader()
+    reader.onload = () => setGcashProofDataUrl(String(reader.result || ''))
+    reader.onerror = () => {
+      setGcashProofFile(null)
+      setGcashProofDataUrl('')
+      alert('Could not read the file. Try another image.')
+    }
+    reader.readAsDataURL(file)
+  }
+
   const handlePaymentMethodChange = (e) => {
     const value = e.target.value
     setPaymentMethod(value)
     setGcashUnavailableMessage('')
 
-    if (value !== 'gcash') return
+    if (value !== 'gcash') {
+      setGcashProofFile(null)
+      setGcashProofDataUrl('')
+      return
+    }
 
     gcashAttemptRef.current += 1
     const attemptId = gcashAttemptRef.current
@@ -166,6 +203,10 @@ function Checkout() {
     e.preventDefault()
     if (localStorage.getItem('role') === 'admin') {
       navigate('/cart', { replace: true })
+      return
+    }
+    if (paymentMethod === 'gcash' && !gcashProofDataUrl) {
+      alert('Please upload a GCash payment proof screenshot before placing your order.')
       return
     }
     setLoading(true)
@@ -198,7 +239,15 @@ function Checkout() {
         paymentMethod,
         shippingInfo: formData,
         status: 'pending',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        ...(paymentMethod === 'gcash' && {
+          gcashPayment: {
+            payToNumber: GCASH_COMPANY_NUMBER,
+            payToName: GCASH_COMPANY_NAME,
+            proofDataUrl: gcashProofDataUrl,
+            proofFileName: gcashProofFile?.name || 'payment-proof',
+          },
+        }),
       }
 
       const existingOrders = JSON.parse(localStorage.getItem('orders') || '[]')
@@ -407,6 +456,46 @@ function Checkout() {
                   />
                   GCash
                 </label>
+
+                {paymentMethod === 'gcash' && (
+                  <div className="mt-4 p-4 border border-amber-200 rounded-xl bg-amber-50/50 space-y-3">
+                    <p className="text-sm text-gray-800">
+                      <span className="font-semibold text-gray-900">Send payment to (GCash)</span>
+                    </p>
+                    <p className="text-base font-mono font-semibold text-[#664C36]"># {GCASH_COMPANY_NUMBER}</p>
+                    <p className="text-sm text-gray-800">
+                      <span className="font-semibold">Name:</span> {GCASH_COMPANY_NAME}
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      After paying, upload a clear screenshot of your payment receipt. Required to place the order.
+                    </p>
+                    <div>
+                      <label
+                        htmlFor="gcash-proof"
+                        className="block text-sm font-medium text-gray-800 mb-1"
+                      >
+                        Payment proof (image) <span className="text-red-600">*</span>
+                      </label>
+                      <input
+                        id="gcash-proof"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleGcashProofChange}
+                        className="block w-full text-sm text-gray-700 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-[#664C36] file:text-white hover:file:bg-[#5a4230] cursor-pointer"
+                      />
+                    </div>
+                    {gcashProofDataUrl && (
+                      <div className="pt-1">
+                        <p className="text-xs text-gray-600 mb-1">Preview</p>
+                        <img
+                          src={gcashProofDataUrl}
+                          alt="Payment proof preview"
+                          className="max-h-48 max-w-full rounded-lg border border-gray-200 object-contain bg-white"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {gcashUnavailableMessage && (
                   <p

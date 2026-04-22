@@ -201,6 +201,21 @@ function Orders() {
                       <div>
                         <h4 className="font-semibold text-gray-900 mb-2">Payment Method</h4>
                         <p className="text-sm text-gray-600">{getPaymentMethodLabel(order.paymentMethod)}</p>
+                        {order.paymentMethod === 'gcash' && order.gcashPayment && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Paid to {order.gcashPayment.payToName} · {order.gcashPayment.payToNumber}
+                          </p>
+                        )}
+                        {order.paymentMethod === 'gcash' && order.gcashPayment?.proofDataUrl && (
+                          <div className="mt-2">
+                            <p className="text-xs font-medium text-gray-700">Your payment proof</p>
+                            <img
+                              src={order.gcashPayment.proofDataUrl}
+                              alt="GCash payment proof"
+                              className="mt-1 max-h-40 rounded-lg border border-gray-200 object-contain"
+                            />
+                          </div>
+                        )}
                         {order.notes && (
                           <>
                             <h4 className="font-semibold text-gray-900 mb-2 mt-4">Notes</h4>

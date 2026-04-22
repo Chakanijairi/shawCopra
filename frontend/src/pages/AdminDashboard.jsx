@@ -475,10 +475,25 @@ function AdminDashboard() {
                             <td className="px-4 sm:px-6 py-4 text-gray-600 text-sm whitespace-nowrap max-w-[200px] truncate" title={order.shippingInfo?.email}>{order.shippingInfo?.email || 'N/A'}</td>
                             <td className="px-4 sm:px-6 py-4 text-gray-600 whitespace-nowrap">{order.items?.length || 0}</td>
                             <td className="px-4 sm:px-6 py-4 font-semibold text-gray-900 whitespace-nowrap">₱{Number(order.total ?? 0).toFixed(2)}</td>
-                            <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                            <td className="px-4 sm:px-6 py-4 align-top">
                               <span className="inline-flex px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700">
                                 {order.paymentMethod === 'cod' ? 'COD' : 'GCash'}
                               </span>
+                              {order.paymentMethod === "gcash" && order.gcashPayment?.proofDataUrl && (
+                                <a
+                                  href={order.gcashPayment.proofDataUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="mt-1 block"
+                                  title="Open payment proof"
+                                >
+                                  <img
+                                    src={order.gcashPayment.proofDataUrl}
+                                    alt="GCash proof"
+                                    className="h-12 w-12 rounded object-cover border border-gray-200"
+                                  />
+                                </a>
+                              )}
                             </td>
                             <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                               <select
