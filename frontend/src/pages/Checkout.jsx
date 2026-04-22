@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import SmartBackButton from '../components/SmartBackButton'
 import { useCart } from '../context/CartContext'
@@ -6,64 +6,6 @@ import { getUserProfile, updateShippingInfo, notifyAdminNewOrder, purchaseDeduct
 import { useSignInModal } from '../context/SignInModalContext'
 import OrderSuccessModal from '../components/OrderSuccessModal'
 import { priceNumber } from '../lib/prices'
-
-/** GCash mobile app deep link (official scheme used by payment providers). */
-const GCASH_APP_URL = 'gcash://'
-
-function isLikelyMobileDevice() {
-  if (typeof navigator === 'undefined') return false
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-    navigator.userAgent
-  )
-}
-
-/**
- * Attempts to open the GCash app. Browsers cannot reliably detect installation;
- * we use visibility/blur + a short timeout to infer failure.
- */
-function tryOpenGcashApp(onUnavailable) {
-  if (!isLikelyMobileDevice()) {
-    onUnavailable()
-    return
-  }
-
-  let settled = false
-  const finish = (opened) => {
-    if (settled) return
-    settled = true
-    document.removeEventListener('visibilitychange', onVisibility)
-    window.removeEventListener('pagehide', onPageHide)
-    window.removeEventListener('blur', onBlur)
-    clearTimeout(failTimer)
-    if (!opened) onUnavailable()
-  }
-
-  const onVisibility = () => {
-    if (document.visibilityState === 'hidden') finish(true)
-  }
-  const onPageHide = () => finish(true)
-  const onBlur = () => {
-    // App may steal focus before visibility flips on some devices
-    setTimeout(() => {
-      if (document.visibilityState === 'hidden') finish(true)
-    }, 0)
-  }
-
-  document.addEventListener('visibilitychange', onVisibility)
-  window.addEventListener('pagehide', onPageHide)
-  window.addEventListener('blur', onBlur)
-
-  const failTimer = setTimeout(() => {
-    if (document.visibilityState === 'visible') finish(false)
-    else finish(true)
-  }, 2200)
-
-  try {
-    window.location.href = GCASH_APP_URL
-  } catch {
-    finish(false)
-  }
-}
 
 function Checkout() {
   const navigate = useNavigate()
@@ -80,10 +22,8 @@ function Checkout() {
   const [orderPlaced, setOrderPlaced] = useState(false)
   /** Set when the shop could not be emailed (missing Gmail on server, SMTP error, etc.) */
   const [adminEmailNotifyIssue, setAdminEmailNotifyIssue] = useState(null)
-  const [gcashUnavailableMessage, setGcashUnavailableMessage] = useState('')
   const [gcashProofFile, setGcashProofFile] = useState(null)
   const [gcashProofDataUrl, setGcashProofDataUrl] = useState('')
-  const gcashAttemptRef = useRef(0)
 
   const GCASH_COMPANY_NUMBER = '09538993345'
   const GCASH_COMPANY_NAME = 'Chawkani Jairi'
@@ -180,23 +120,10 @@ function Checkout() {
   const handlePaymentMethodChange = (e) => {
     const value = e.target.value
     setPaymentMethod(value)
-    setGcashUnavailableMessage('')
-
     if (value !== 'gcash') {
       setGcashProofFile(null)
       setGcashProofDataUrl('')
-      return
     }
-
-    gcashAttemptRef.current += 1
-    const attemptId = gcashAttemptRef.current
-
-    tryOpenGcashApp(() => {
-      if (attemptId !== gcashAttemptRef.current) return
-      setGcashUnavailableMessage(
-        'GCash is not available on this device. Try another payment method.'
-      )
-    })
   }
 
   const handleSubmit = async (e) => {
@@ -495,15 +422,6 @@ function Checkout() {
                       </div>
                     )}
                   </div>
-                )}
-
-                {gcashUnavailableMessage && (
-                  <p
-                    className="mt-3 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2"
-                    role="alert"
-                  >
-                    {gcashUnavailableMessage}
-                  </p>
                 )}
 
               </div>
